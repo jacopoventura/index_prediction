@@ -3,10 +3,10 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import precision_score
 from helper_train_test import backtest
 import pandas as pd
+pd.set_option('display.max_columns', None)
 
 # https://www.youtube.com/watch?v=1O_BenficgE
 # TO DO:
-# 0. Add to my GitHub repo
 # 1. Train new model with MA and VIX
 # 2. add RSI https://medium.com/@farrago_course0f/using-python-and-rsi-to-generate-trading-signals-a56a684fb1
 # 3. Train new model with RSI
@@ -27,9 +27,16 @@ THRESHOLD_PROBABILITY_POSITIVE = 0.6
 sp500 = yf.Ticker("^GSPC")
 sp500 = sp500.history(period="max")
 
+# Extract date from index and set date as index (VIX has another hour, thus dataframes cannot be directly merged)
+sp500["Trading date"] = [d.date() for d in sp500.index.to_list()]
+sp500.set_index("Trading date", inplace=True)
+
 # Query the historical data of VIX
 vix = yf.Ticker("^VIX")
 vix = vix.history(period="max")
+# Extract date from index and set date as index
+vix["Trading date"] = [d.date() for d in vix.index.to_list()]
+vix.set_index("Trading date", inplace=True)
 vix_simple = vix[["Close"]].copy()  # NOTE: to extract a sub-dataframe, we need a LIST of column names
 vix_simple.rename(columns={'Close': 'VIX'}, inplace=True)
 
@@ -41,6 +48,9 @@ sp500 = sp500.loc[vix_simple.index[0]:].copy()
 del sp500["Dividends"]
 del sp500["Stock Splits"]
 
+# Concatenate VIX
+sp500 = pd.concat([sp500, vix_simple], axis=1)
+
 # The ML model shall predict if the price of tomorrow will be higher or lower
 # Create a column with the closing price of the day after (which is the movement we want to predict)
 # Target: 0 if negative day, 1 if positive day
@@ -49,7 +59,7 @@ sp500["Target"] = (sp500["Tomorrow"] > sp500["Close"]).astype(int)
 # NOTE: we are dealing with time-series data. Cross validation is not useful
 
 # Concatenate index with VIX
-sp500_vix = pd.concat([sp500, vix_simple], axis=1)
+
 
 # behavior of the index
 print("=========================== behavior of the index =================================")
@@ -59,7 +69,6 @@ percentage_positive_days = sp500["Target"].iloc[TRAINING_DAYS_INITIAL:].value_co
 print("Number of trading days used to test the model: ", number_of_days_tested)
 print("Percentage of positive days in the dataset: ", percentage_positive_days[1])
 print(" ")
-
 
 # This plot is crashing the script due to a bug with macOS
 # sp500_plot = sp500.plot.line(y="Close", use_index=True)
@@ -73,7 +82,6 @@ print(" ")
 # define data to be used by the ML model to predict the output
 predictors_basic = ["Close", "Volume", "Open", "High", "Low"]
 
-
 # ML model: random forest classifier. Reasons:
 # 1. resistant to overfit because of the numerous random trees
 # 2. run quickly
@@ -82,7 +90,6 @@ model_basic = RandomForestClassifier(n_estimators=100,  # number of trees: the h
                                      min_samples_split=100,  # the higher, the less accurate, but the less overfits
                                      random_state=1)  # if 1, same initialization
 
-
 # Train and backtest (train inside backtest)
 predictions = backtest(sp500, model_basic, predictors_basic,
                        days_initial_train=TRAINING_DAYS_INITIAL,
@@ -90,7 +97,6 @@ predictions = backtest(sp500, model_basic, predictors_basic,
                        threshold_probability_positive=THRESHOLD_PROBABILITY_POSITIVE)
 
 model_basic_precision_score = precision_score(predictions["Target"], predictions["Predictions"])
-
 
 # behavior of the basic model
 print("=========================== behavior of the basic model =================================")
