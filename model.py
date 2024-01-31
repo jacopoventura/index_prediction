@@ -18,6 +18,15 @@ pd.set_option('display.max_columns', None)
 #   10b: the input is an array with the last N days (represented by the predictor values as in 10a). The input is the last N days of 10a
 
 
+# #######################################################################
+# Choice of predictors:
+# VIX: is used because low vix usually means price increase
+# Daily movements with respect to previous close: relative change does not change with the time (like the price). Also, patterns (like recovery
+#       from negative lows) can be recognized and used.
+# Day of the year: possible info on seasonality (ex: october i the most bearish month for stocks)
+# #######################################################################
+
+
 # ============================================= PARAMETERS =====================================
 TRAINING_DAYS_INITIAL = 2500  # number of days for the first training
 TEST_DAYS_STEP = 250  # number of days for the testing the prediction.
@@ -66,6 +75,10 @@ sp500["VIX/prev day VIX"] = sp500["VIX"] / sp500["VIX"].shift(1)
 
 # Calculate Volume change with respect to previous day
 sp500["Volume/prev day volume"] = sp500["Volume"] / sp500["Volume"].shift(1)
+
+# Calculate the day of the year
+dates = sp500.index.to_list()
+sp500["Day of year"] = [d.timetuple().tm_yday for d in dates]
 
 # # Utest
 # num_rows = sp500.shape[0]
@@ -193,5 +206,11 @@ create_and_test_random_forest(sp500, predictors_ma + predictors_price_movement,
 # We combine the first three advanced models.
 print("============================== model based on MA, price movement and VIX =================================")
 create_and_test_random_forest(sp500, predictors_ma + predictors_price_movement + ["VIX"],
+                              200, 50,
+                              TRAINING_DAYS_INITIAL, TEST_DAYS_STEP, THRESHOLD_PROBABILITY_POSITIVE)
+
+
+print("============================== model based on MA, price movement, VIX and day of year =================================")
+create_and_test_random_forest(sp500, predictors_ma + predictors_price_movement + ["VIX"] + ["Day of year"],
                               200, 50,
                               TRAINING_DAYS_INITIAL, TEST_DAYS_STEP, THRESHOLD_PROBABILITY_POSITIVE)
