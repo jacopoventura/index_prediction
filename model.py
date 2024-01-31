@@ -1,7 +1,9 @@
 import yfinance as yf
-from helper_train_test import create_and_test_random_forest
+import multiprocessing
 import pandas as pd
+from helper_train_test import create_and_test_random_forest
 pd.set_option('display.max_columns', None)
+print("Number of available cores: ", multiprocessing.cpu_count(), "\n")
 
 # https://www.youtube.com/watch?v=1O_BenficgE
 # TO DO
