@@ -1,4 +1,6 @@
 import pandas as pd
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import precision_score
 
 
 def predict(train_data, test_data, predictors, model, threshold_probability_positive=.6):
@@ -30,6 +32,7 @@ def backtest(data, model, predictors, days_initial_train=2500, days_test=250, th
     Function to backtest the model.
     We train for the first days_initial_train days, and we test the following days_test days.
     Then we train for the (days_initial_train + k*days_test) days, and we test the following days_test days.
+    NOTE: this is just a backtest to test all the possible successive trainings.
     """
     all_predictions = []
     number_trading_days = data.shape[0]
@@ -39,3 +42,35 @@ def backtest(data, model, predictors, days_initial_train=2500, days_test=250, th
         predictions = predict(train_dataset, test_dataset, predictors, model, threshold_probability_positive)
         all_predictions.append(predictions)
     return pd.concat(all_predictions)
+
+
+def create_and_test_random_forest(dataset, predictors_list,
+                                  estimators=200, sample_split=50,
+                                  training_days_initial=2500, test_days_step=250, threshold_probability_positive=.6):
+    """
+    Create Random Forest model, train and backtest.
+    :param dataset: full dataset
+    :param predictors_list: list of columns of the dataset used for predicting the target
+    :param estimators: number of estimators of the random forest model
+    :param sample_split: minimum sample split of the random forest model
+    :param training_days_initial: number of trading days for the first training of the backtest
+    :param test_days_step: number of trading days for testing
+    :param threshold_probability_positive: probability threshold to consider a positive price prediction
+    :return: None
+    """
+
+    model = RandomForestClassifier(n_estimators=estimators,  # number of trees: the higher, the better the accuracy
+                                   min_samples_split=sample_split,  # the higher, the less accurate, but the less overfits
+                                   random_state=1)  # if 1, same initialization
+
+    # Train and backtest (train inside backtest)
+    # NOTE: this is just a backtest to test all the possible successive trainings.
+    # The deployed model will be trained using a given time range only.
+    predictions = backtest(dataset, model, predictors_list,
+                           days_initial_train=training_days_initial,
+                           days_test=test_days_step,
+                           threshold_probability_positive=threshold_probability_positive)
+
+    # calculate precision score
+    precision = precision_score(predictions["Target"], predictions["Predictions"])
+    print("Precision to predict a positive day (?): ", precision, "\n")
