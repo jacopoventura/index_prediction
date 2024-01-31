@@ -61,7 +61,8 @@ def create_and_test_random_forest(dataset, predictors_list,
 
     model = RandomForestClassifier(n_estimators=estimators,  # number of trees: the higher, the better the accuracy
                                    min_samples_split=sample_split,  # the higher, the less accurate, but the less overfits
-                                   random_state=1)  # if 1, same initialization
+                                   random_state=1,  # if 1, same initialization
+                                   n_jobs=-1)  # number of cores to be used (-1: max number of cores)
 
     # Train and backtest (train inside backtest)
     # NOTE: this is just a backtest to test all the possible successive trainings.

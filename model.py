@@ -5,7 +5,6 @@ pd.set_option('display.max_columns', None)
 
 # https://www.youtube.com/watch?v=1O_BenficgE
 # TO DO
-# 2. Train new model with MA of VIX
 # 3. add RSI https://medium.com/@farrago_course0f/using-python-and-rsi-to-generate-trading-signals-a56a684fb1
 # 4. Train new model with RSI
 # 5. How do I use this model daily ?
@@ -32,6 +31,7 @@ TRAINING_DAYS_INITIAL = 2500  # number of days for the first training
 TEST_DAYS_STEP = 250  # number of days for the testing the prediction.
 # It indicates how often we should train again the model with most recent data
 THRESHOLD_PROBABILITY_POSITIVE = 0.6
+HORIZON_MA_VIX = 5
 
 
 # ============================================== DATASET =======================================
@@ -181,6 +181,9 @@ for horizon in horizons_days_moving_average:
 
     predictors_ma += [column_name_ratio_with_ma, column_name_trend]
 
+moving_average_vix = sp500["VIX"].rolling(HORIZON_MA_VIX).mean()
+sp500["VIX MA"] = sp500["VIX"] / moving_average_vix
+
 
 # remove rows containing at least 1 NaN
 sp500 = sp500.dropna()
@@ -208,9 +211,10 @@ print("============================== model based on MA, price movement and VIX 
 create_and_test_random_forest(sp500, predictors_ma + predictors_price_movement + ["VIX"],
                               200, 50,
                               TRAINING_DAYS_INITIAL, TEST_DAYS_STEP, THRESHOLD_PROBABILITY_POSITIVE)
+# Here VIX MA does not help
 
 
 print("============================== model based on MA, price movement, VIX and day of year =================================")
-create_and_test_random_forest(sp500, predictors_ma + predictors_price_movement + ["VIX"] + ["Day of year"],
+create_and_test_random_forest(sp500, predictors_ma + predictors_price_movement + ["VIX", "VIX MA"] + ["Day of year"],
                               200, 50,
                               TRAINING_DAYS_INITIAL, TEST_DAYS_STEP, THRESHOLD_PROBABILITY_POSITIVE)
