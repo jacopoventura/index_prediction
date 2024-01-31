@@ -182,14 +182,15 @@ create_and_test_random_forest(sp500, predictors_ma,
 # Now we build a model that uses rations with the Moving Averages (MA) and relative price change as predictors.
 # We combine the first two advanced models.
 
-
 print("============================== model based on MA and price movement =================================")
 create_and_test_random_forest(sp500, predictors_ma + predictors_price_movement,
                               200, 50,
                               TRAINING_DAYS_INITIAL, TEST_DAYS_STEP, THRESHOLD_PROBABILITY_POSITIVE)
 
 
-# behavior of the model
+# ======================= ADVANCED MODEL 4: PREDICTION WITH MA, PRICE CHANGE AND VIX =========================
+# Now we build a model that uses rations with the Moving Averages (MA), relative price change and VIX as predictors.
+# We combine the first three advanced models.
 print("============================== model based on MA, price movement and VIX =================================")
 create_and_test_random_forest(sp500, predictors_ma + predictors_price_movement + ["VIX"],
                               200, 50,
