@@ -44,6 +44,33 @@ def backtest(data, model, predictors, days_initial_train=2500, days_test=250, th
     return pd.concat(all_predictions)
 
 
+def train_and_deploy(data, predictors, start_date_training, end_date_training, estimators=200, sample_split=50,
+                     threshold_probability_positive=.6):
+
+    model = RandomForestClassifier(n_estimators=estimators,  # number of trees: the higher, the better the accuracy
+                                   min_samples_split=sample_split,  # the higher, the less accurate, but the less overfits
+                                   random_state=1,  # if 1, same initialization
+                                   n_jobs=-1)  # number of cores to be used (-1: max number of cores)
+
+    # to do: specify initial and final dates
+
+    train_dataset = data.loc[start_date_training:end_date_training].copy()
+    test_dataset = data.loc[end_date_training:].copy()
+
+    # train the model
+    model.fit(train_dataset[predictors], train_dataset["Target"])
+
+    # predict the data. Target: 0 if negative day, 1 if positive day
+    # predictions = model.predict(test_data[predictors])  # predict the result (0 or 1)
+    predictions = model.predict_proba(test_dataset[predictors])[:, 1]  # predict the probability of each possible class [0, 1]
+    predictions[predictions >= threshold_probability_positive] = 1
+    predictions[predictions < threshold_probability_positive] = 0
+    predictions = pd.Series(predictions, index=test_dataset.index, name="Predictions")
+    predictions = pd.concat([test_dataset["Target"], predictions], axis=1)
+    ps = precision_score(predictions["Target"], predictions["Predictions"])
+    print("Precision to predict a positive day (?): ", ps, "\n")
+
+
 def create_and_test_random_forest(dataset, predictors_list,
                                   estimators=200, sample_split=50,
                                   training_days_initial=2500, test_days_step=250, threshold_probability_positive=.6):

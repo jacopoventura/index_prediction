@@ -1,22 +1,22 @@
 import yfinance as yf
 import multiprocessing
 import pandas as pd
-from helper_train_test import create_and_test_random_forest
+import datetime
+from src.finance_algo import calculate_rsi
+from src.helper_ml_train_test import create_and_test_random_forest, train_and_deploy
 pd.set_option('display.max_columns', None)
 print("Number of available cores: ", multiprocessing.cpu_count(), "\n")
 
 # https://www.youtube.com/watch?v=1O_BenficgE
 # TO DO
-# 3. add RSI https://medium.com/@farrago_course0f/using-python-and-rsi-to-generate-trading-signals-a56a684fb1
-# 4. Train new model with RSI
-# 5. How do I use this model daily ?
-# 6. Hyper parameterization: parameters of the model, length of training window, etc...
-# 7. Clarify prediction negative day
-# 8. Add other predictors
-# 9. consider daily change prediction (positive, -0.5pct, -1pct, -2pct, -3pct, more than -3pct)
-# 10. Try a NN:
-#   10a: the input is an array with values of the predictors. Here predictors should include the tendency of the movement
-#   10b: the input is an array with the last N days (represented by the predictor values as in 10a). The input is the last N days of 10a
+# 1. How do I use this model daily ? Train and code daily run of the algo. Check when to run: after close?
+# 2. add behavior N previous days
+# 3. Clarify prediction negative day
+# 4. Hyper parameterization: parameters of the model, length of training window, etc...
+# 5. consider daily change prediction (positive, -0.5pct, -1pct, -2pct, -3pct, more than -3pct)
+# 6. Try a NN:
+#   6a: the input is an array with values of the predictors. Here predictors should include the tendency of the movement
+#   6b: the input is an array with the last N days (represented by the predictor values as in 6a). The input is the last N days of 10a
 
 
 # #######################################################################
@@ -29,10 +29,10 @@ print("Number of available cores: ", multiprocessing.cpu_count(), "\n")
 
 
 # ============================================= PARAMETERS =====================================
-TRAINING_DAYS_INITIAL = 2500  # number of days for the first training
-TEST_DAYS_STEP = 250  # number of days for the testing the prediction.
+TRAINING_DAYS_INITIAL = 1000  # number of days for the first training
+TEST_DAYS_STEP = 125  # number of days for the testing the prediction. Also frequency of new training.
 # It indicates how often we should train again the model with most recent data
-THRESHOLD_PROBABILITY_POSITIVE = 0.6
+THRESHOLD_PROBABILITY_POSITIVE = 0.55
 HORIZON_MA_VIX = 5
 
 
@@ -55,8 +55,9 @@ vix.set_index("Trading date", inplace=True)
 vix.rename(columns={'Close': 'VIX'}, inplace=True)
 
 # we consider only the most recent data. The market could have behaved differently many decades ago
-# sp500 = sp500.loc["1995-01-01":].copy()
-sp500 = sp500.loc[vix.index[0]:].copy()
+# sp500 = sp500.loc[vix.index[0]:].copy()
+sp500 = sp500.loc[datetime.datetime(2000,1,1).date():].copy()
+vix = vix.loc[datetime.datetime(2000,1,1).date():].copy()
 
 # Remove useless columns (relevant for single stocks only)
 del sp500["Dividends"]
@@ -64,6 +65,15 @@ del sp500["Stock Splits"]
 
 # Concatenate VIX
 sp500 = pd.concat([sp500, vix[["VIX"]]], axis=1)
+
+# Calculate RSI
+periods_rsi = [5, 14]
+predictors_rsi = []
+for period in periods_rsi:
+    column_name_rsi = f"RSI{period}"
+    sp500[column_name_rsi] = calculate_rsi(sp500["Close"], period=period)
+    predictors_rsi += [column_name_rsi]
+
 
 # Calculate daily price movement with respect to previous day close
 sp500_previous_day_close = sp500["Close"].shift(1)
@@ -98,6 +108,7 @@ sp500["Day of year"] = [d.timetuple().tm_yday for d in dates]
 # Target: 0 if negative day, 1 if positive day
 sp500["Tomorrow"] = sp500["Close"].shift(-1)
 sp500["Target"] = (sp500["Tomorrow"] > sp500["Close"]).astype(int)
+
 
 # remove rows containing at least 1 NaN
 sp500 = sp500.dropna()
@@ -156,7 +167,7 @@ create_and_test_random_forest(sp500, predictors_price_movement,
 
 # ============================ ADVANCED MODEL 2: PREDICTION WITH MA ONLY =========================
 # Now we build a model that uses rations with the Moving Averages (MA) as predictors. Prices will not be used in this model.
-horizons_days_moving_average = [2, 5, 22, 50, 100, 200, 250]
+horizons_days_moving_average = [5, 50, 100]
 predictors_ma = []
 
 # Loop over the MA horizons and calculate the ratios
@@ -220,3 +231,19 @@ print("============================== model based on MA, price movement, VIX and
 create_and_test_random_forest(sp500, predictors_ma + predictors_price_movement + ["VIX", "VIX MA"] + ["Day of year"],
                               200, 50,
                               TRAINING_DAYS_INITIAL, TEST_DAYS_STEP, THRESHOLD_PROBABILITY_POSITIVE)
+
+
+# ======================= ADVANCED MODEL 5: PREDICTION WITH MA, PRICE CHANGE, RSI AND VIX =========================
+# Now we build a model that uses rations with the MAs, relative price change, RSIs and VIX as predictors.
+print("============================== model based on MA, price movement, VIX and RSI =================================")
+create_and_test_random_forest(sp500, predictors_ma + predictors_price_movement + ["VIX"] + predictors_rsi,
+                              200, 50,
+                              TRAINING_DAYS_INITIAL, TEST_DAYS_STEP, THRESHOLD_PROBABILITY_POSITIVE)
+
+start_date_training = datetime.datetime(2001,1,1).date()
+end_date_training = datetime.datetime(2023,12,31).date()
+train_and_deploy(sp500, predictors_ma + predictors_price_movement + ["VIX"] + predictors_rsi,
+                 start_date_training, end_date_training,
+                 500, 50, THRESHOLD_PROBABILITY_POSITIVE)
+# Here VIX MA does not help
+
