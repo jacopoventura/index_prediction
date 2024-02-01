@@ -1,6 +1,7 @@
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import precision_score
+import pickle
 
 
 def predict(train_data, test_data, predictors, model, threshold_probability_positive=.6):
@@ -60,9 +61,16 @@ def train_and_deploy(data, predictors, start_date_training, end_date_training, e
     # train the model
     model.fit(train_dataset[predictors], train_dataset["Target"])
 
+    # save model
+    filename = "RF_test.pickle"
+    pickle.dump(model, open(filename, "wb"))
+
+    # load model
+    model_loaded = pickle.load(open(filename, "rb"))
+
     # predict the data. Target: 0 if negative day, 1 if positive day
     # predictions = model.predict(test_data[predictors])  # predict the result (0 or 1)
-    predictions = model.predict_proba(test_dataset[predictors])[:, 1]  # predict the probability of each possible class [0, 1]
+    predictions = model_loaded.predict_proba(test_dataset[predictors])[:, 1]  # predict the probability of each possible class [0, 1]
     predictions[predictions >= threshold_probability_positive] = 1
     predictions[predictions < threshold_probability_positive] = 0
     predictions = pd.Series(predictions, index=test_dataset.index, name="Predictions")
@@ -102,3 +110,22 @@ def create_and_test_random_forest(dataset, predictors_list,
     # calculate precision score
     precision = precision_score(predictions["Target"], predictions["Predictions"])
     print("Precision to predict a positive day (?): ", precision, "\n")
+
+
+def add_previous_behavior(data: pd.DataFrame, number_of_days_to_shift_list: list, predictors_list: list) -> tuple:
+    """
+    Add to the current day data from number_of_days_to_shift previous day. Data tags are defined in the predictors list.
+    :param data: history of price
+    :param number_of_days_to_shift_list: list of numbers of days in the past to associate the data of that day in the current day
+    :param predictors_list: list of tags of data to be moved to the current day
+    :return: dataframe with data of the past day and list of added column names
+    """
+
+    new_column_names_list = []
+    for shift in number_of_days_to_shift_list:
+        suffix = "-"+str(shift)
+        for predictor in predictors_list:
+            column_name = predictor+suffix
+            data[column_name] = data.shift(shift)[predictor]
+            new_column_names_list.append(column_name)
+    return data, new_column_names_list

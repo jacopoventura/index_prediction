@@ -3,14 +3,14 @@ import multiprocessing
 import pandas as pd
 import datetime
 from src.finance_algo import calculate_rsi
-from src.helper_ml_train_test import create_and_test_random_forest, train_and_deploy
+from src.helper_ml_train_test import create_and_test_random_forest, train_and_deploy, add_previous_behavior
 pd.set_option('display.max_columns', None)
+pd.set_option('display.max_rows', 500)
+pd.set_option('display.width', 1000)
 print("Number of available cores: ", multiprocessing.cpu_count(), "\n")
 
-# https://www.youtube.com/watch?v=1O_BenficgE
 # TO DO
 # 1. How do I use this model daily ? Train and code daily run of the algo. Check when to run: after close?
-# 2. add behavior N previous days
 # 3. Clarify prediction negative day
 # 4. Hyper parameterization: parameters of the model, length of training window, etc...
 # 5. consider daily change prediction (positive, -0.5pct, -1pct, -2pct, -3pct, more than -3pct)
@@ -55,9 +55,7 @@ vix.set_index("Trading date", inplace=True)
 vix.rename(columns={'Close': 'VIX'}, inplace=True)
 
 # we consider only the most recent data. The market could have behaved differently many decades ago
-# sp500 = sp500.loc[vix.index[0]:].copy()
-sp500 = sp500.loc[datetime.datetime(2000,1,1).date():].copy()
-vix = vix.loc[datetime.datetime(2000,1,1).date():].copy()
+sp500 = sp500.loc[vix.index[0]:].copy()
 
 # Remove useless columns (relevant for single stocks only)
 del sp500["Dividends"]
@@ -77,16 +75,16 @@ for period in periods_rsi:
 
 # Calculate daily price movement with respect to previous day close
 sp500_previous_day_close = sp500["Close"].shift(1)
-sp500["Close/prev day close"] = sp500["Close"] / sp500_previous_day_close
-sp500["Open/prev day close"] = sp500["Open"] / sp500_previous_day_close
-sp500["High/prev day close"] = sp500["High"] / sp500_previous_day_close
-sp500["Low/prev day close"] = sp500["Low"] / sp500_previous_day_close
+sp500["Close/PDclose"] = sp500["Close"] / sp500_previous_day_close
+sp500["Open/PDclose"] = sp500["Open"] / sp500_previous_day_close
+sp500["High/PDclose"] = sp500["High"] / sp500_previous_day_close
+sp500["Low/PDclose"] = sp500["Low"] / sp500_previous_day_close
 
 # Calculate VIX change with respect to previous day
-sp500["VIX/prev day VIX"] = sp500["VIX"] / sp500["VIX"].shift(1)
+sp500["VIX/PDVIX"] = sp500["VIX"] / sp500["VIX"].shift(1)
 
 # Calculate Volume change with respect to previous day
-sp500["Volume/prev day volume"] = sp500["Volume"] / sp500["Volume"].shift(1)
+sp500["Volume/PDvolume"] = sp500["Volume"] / sp500["Volume"].shift(1)
 
 # Calculate the day of the year
 dates = sp500.index.to_list()
@@ -109,6 +107,12 @@ sp500["Day of year"] = [d.timetuple().tm_yday for d in dates]
 sp500["Tomorrow"] = sp500["Close"].shift(-1)
 sp500["Target"] = (sp500["Tomorrow"] > sp500["Close"]).astype(int)
 
+# Associate
+features_to_associate = ["Close/PDclose", "Open/PDclose"]
+sp500, past_features_associated_today_list = add_previous_behavior(sp500, [1, 2], features_to_associate)
+
+# select specific interval
+sp500 = sp500.loc[datetime.datetime(2000, 1, 1).date():].copy()
 
 # remove rows containing at least 1 NaN
 sp500 = sp500.dropna()
@@ -153,11 +157,12 @@ print("NOTE: performance of the basic model are poor because it is trained with 
 # The model does not predict well because we used price data directly. If 10 years ago the price was 10 and now is 1000,
 # then the patterns are hardly recognized by the model.
 # We now train a model with prices relative to the previous day.
-predictors_price_movement = ["Close/prev day close",
-                             "Open/prev day close",
-                             "High/prev day close",
-                             "Low/prev day close",
-                             "Volume/prev day volume"]
+predictors_price_movement = ["Close/PDclose",
+                             "Open/PDclose",
+                             "High/PDclose",
+                             "Low/PDclose",
+                             "Volume/PDvolume"
+                             ]
 
 print("============================== model based on relative price movement ==================================")
 create_and_test_random_forest(sp500, predictors_price_movement,
@@ -227,23 +232,33 @@ create_and_test_random_forest(sp500, predictors_ma + predictors_price_movement +
 # Here VIX MA does not help
 
 
+# ======================= ADVANCED MODEL 5: PREDICTION WITH MA, PRICE CHANGE, VIX AND DAY OF YEAR =========================
+# Now we build a model that uses rations with the Moving Averages (MA), relative price change and VIX as predictors.
 print("============================== model based on MA, price movement, VIX and day of year =================================")
 create_and_test_random_forest(sp500, predictors_ma + predictors_price_movement + ["VIX", "VIX MA"] + ["Day of year"],
                               200, 50,
                               TRAINING_DAYS_INITIAL, TEST_DAYS_STEP, THRESHOLD_PROBABILITY_POSITIVE)
 
 
-# ======================= ADVANCED MODEL 5: PREDICTION WITH MA, PRICE CHANGE, RSI AND VIX =========================
+# ======================= ADVANCED MODEL 6: PREDICTION WITH MA, PRICE CHANGE, RSI AND VIX =========================
 # Now we build a model that uses rations with the MAs, relative price change, RSIs and VIX as predictors.
 print("============================== model based on MA, price movement, VIX and RSI =================================")
 create_and_test_random_forest(sp500, predictors_ma + predictors_price_movement + ["VIX"] + predictors_rsi,
                               200, 50,
                               TRAINING_DAYS_INITIAL, TEST_DAYS_STEP, THRESHOLD_PROBABILITY_POSITIVE)
 
-start_date_training = datetime.datetime(2001,1,1).date()
-end_date_training = datetime.datetime(2023,12,31).date()
+
+# ======================= ADVANCED MODEL 7: PREDICTION WITH MA, PRICE CHANGE, RSI, VIX AND PAST PATTERN  =========================
+# Now we build a model that uses rations with the MAs, relative price change, RSIs and VIX as predictors.
+print("============================== model based on MA, price movement, VIX, RSI and past movements =================================")
+create_and_test_random_forest(sp500, predictors_ma + predictors_price_movement + ["VIX"] + predictors_rsi + past_features_associated_today_list,
+                              200, 50,
+                              TRAINING_DAYS_INITIAL, TEST_DAYS_STEP, THRESHOLD_PROBABILITY_POSITIVE)
+
+start_date_training = datetime.datetime(2001, 1, 1).date()
+end_date_training = datetime.datetime(2023, 12, 31).date()
 train_and_deploy(sp500, predictors_ma + predictors_price_movement + ["VIX"] + predictors_rsi,
                  start_date_training, end_date_training,
                  500, 50, THRESHOLD_PROBABILITY_POSITIVE)
-# Here VIX MA does not help
 
+# STEPS to deploy
