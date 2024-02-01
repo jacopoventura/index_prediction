@@ -37,11 +37,30 @@ def backtest(data, model, predictors, days_initial_train=2500, days_test=250, th
     """
     all_predictions = []
     number_trading_days = data.shape[0]
+
+    # Expand the training dataset
     for i in range(days_initial_train, number_trading_days, days_test):
         train_dataset = data.iloc[:i].copy()
         test_dataset = data.iloc[i:(i+days_test)].copy()
+        # print("Train: ", train_dataset.index[0], " to ", train_dataset.index[-1], " days: ", train_dataset.shape[0])
+        # print("Test : ", test_dataset.index[0], " to ", test_dataset.index[-1], " days: ", test_dataset.shape[0])
         predictions = predict(train_dataset, test_dataset, predictors, model, threshold_probability_positive)
         all_predictions.append(predictions)
+        # print("add score")
+
+    # Slide the training windows with a fixed size
+    k = 0
+    for i in range(days_initial_train, number_trading_days, days_test):
+        start_train_idx = k * days_test
+        train_dataset = data.iloc[start_train_idx:i].copy()
+        test_dataset = data.iloc[i:(i+days_test)].copy()
+        print("Train: ", train_dataset.index[0], " to ", train_dataset.index[-1], " days: ", train_dataset.shape[0])
+        print("Test : ", test_dataset.index[0], " to ", test_dataset.index[-1], " days: ", test_dataset.shape[0])
+        predictions = predict(train_dataset, test_dataset, predictors, model, threshold_probability_positive)
+        all_predictions.append(predictions)
+        k += 1
+        # print("add score")
+
     return pd.concat(all_predictions)
 
 

@@ -10,8 +10,9 @@ pd.set_option('display.width', 1000)
 print("Number of available cores: ", multiprocessing.cpu_count(), "\n")
 
 # TO DO
-# 1. How do I use this model daily ? Train and code daily run of the algo. Check when to run: after close?
-# 3. Clarify prediction negative day
+# 1. check score. Provide one score every new train. Save in list, then final results: sliding or accumulating training ?
+# 2. Clarify prediction negative day
+# 3. How do I use this model daily ? Train and code daily run of the algo. Check when to run: after close?
 # 4. Hyper parameterization: parameters of the model, length of training window, etc...
 # 5. consider daily change prediction (positive, -0.5pct, -1pct, -2pct, -3pct, more than -3pct)
 # 6. Try a NN:
@@ -34,6 +35,7 @@ TEST_DAYS_STEP = 125  # number of days for the testing the prediction. Also freq
 # It indicates how often we should train again the model with most recent data
 THRESHOLD_PROBABILITY_POSITIVE = 0.55
 HORIZON_MA_VIX = 5
+INITIAL_DATE_OF_DATASET = datetime.datetime(2000, 1, 1).date()
 
 
 # ============================================== DATASET =======================================
@@ -112,7 +114,7 @@ features_to_associate = ["Close/PDclose", "Open/PDclose"]
 sp500, past_features_associated_today_list = add_previous_behavior(sp500, [1, 2], features_to_associate)
 
 # select specific interval
-sp500 = sp500.loc[datetime.datetime(2000, 1, 1).date():].copy()
+sp500 = sp500.loc[INITIAL_DATE_OF_DATASET:].copy()
 
 # remove rows containing at least 1 NaN
 sp500 = sp500.dropna()
@@ -215,7 +217,6 @@ create_and_test_random_forest(sp500, predictors_ma,
 # ======================= ADVANCED MODEL 3: PREDICTION WITH MA AND PRICE CHANGE =========================
 # Now we build a model that uses rations with the Moving Averages (MA) and relative price change as predictors.
 # We combine the first two advanced models.
-
 print("============================== model based on MA and price movement =================================")
 create_and_test_random_forest(sp500, predictors_ma + predictors_price_movement,
                               200, 50,
