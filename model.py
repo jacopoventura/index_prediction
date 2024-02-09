@@ -11,7 +11,6 @@ pd.set_option('display.width', 1000)
 print("Number of available cores: ", multiprocessing.cpu_count(), "\n")
 
 # TO DO
-# 0. SELECT LAST DATE CORRECTLY !!!!
 # 0. Usage of prediction positive (1) & prediction negative (1) together ?
 # 1. Most important hyperparameters of Random Forest + Understand how to evaluate prediction negative day
 # 2. add USD/EUR data
@@ -65,15 +64,15 @@ print(" ")
 predictors_price_change = ["Close/PDclose", "Open/PDclose", "High/PDclose", "Low/PDclose", "Volume/PDvolume"]
 
 dict_predictors = {"price": ["open", "close", "high", "low", "volume"],
-                   "price change": predictors_price_change,
-                   "MA": predictors_dict["ma"],
-                   "price change, MA": predictors_price_change + predictors_dict["ma"],
-                   "price change, rsi": predictors_price_change + predictors_dict["rsi"],
-                   "price change, MA, rsi": predictors_price_change + predictors_dict["ma"] + predictors_dict["rsi"],
+                   #"price change": predictors_price_change,
+                   #"MA": predictors_dict["ma"],
+                   #"price change, MA": predictors_price_change + predictors_dict["ma"],
+                   #"price change, rsi": predictors_price_change + predictors_dict["rsi"],
+                   #"price change, MA, rsi": predictors_price_change + predictors_dict["ma"] + predictors_dict["rsi"],
                    "price change, MA, rsi, vix": predictors_price_change + predictors_dict["ma"] + predictors_dict["rsi"] + ["vix", "vix/sma"],
-                   "price change, MA, rsi, vix, day": predictors_price_change +
-                                                      predictors_dict["ma"] +
-                                                      predictors_dict["rsi"] + ["vix", "vix/sma"] + ["Day of year"],
+                   #"price change, MA, rsi, vix, day": predictors_price_change +
+                   #                                   predictors_dict["ma"] +
+                   #                                   predictors_dict["rsi"] + ["vix", "vix/sma"] + ["Day of year"],
                    "price change, MA, rsi, vix, previous days": predictors_price_change +
                                                                 predictors_dict["ma"] +
                                                                 predictors_dict["rsi"] + ["vix", "vix/sma"] +
@@ -100,7 +99,7 @@ for key, predictors in dict_predictors.items():
                   "We need to train with price data relative to each others.\n")
 
 # ================================== Selected model ==============================
-selected_predictors = dict_predictors["price change, MA, rsi, vix"]
+selected_predictors = dict_predictors["price change, MA, rsi, vix, previous days"]
 start_date_training = datetime.datetime(2001, 1, 1).date()
 end_date_training = datetime.datetime(2023, 12, 31).date()
 train_and_deploy(sp500, selected_predictors,
@@ -124,5 +123,5 @@ else:
         final_prediction = "positive"
     else:
         final_prediction = "negative"
-date_prediction = last_closed_trading_day.name + datetime.timedelta(1)
+date_prediction = last_closed_trading_day.name + datetime.timedelta(-1)
 print(f"The trading day after {date_prediction} will be {final_prediction}")
