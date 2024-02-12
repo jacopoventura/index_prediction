@@ -10,7 +10,8 @@ from stockstats import StockDataFrame
 PRINT = False
 
 
-def predict(train_data: pd.DataFrame, test_data: pd.DataFrame, predictors: list, model, threshold_probability_positive=.6) -> list:
+def predict(train_data: pd.DataFrame, test_data: pd.DataFrame, predictors: list,
+            model, threshold_probability_positive: float = .6) -> list:
     """
     Train a Machine Learning model (scikit-learn).
     :param train_data: full dataset of training data
@@ -43,7 +44,9 @@ def check_prediction_probability_binary(prediction_probabilities: list, threshol
     return prediction_probabilities
 
 
-def backtest(data: pd.DataFrame, model, predictors:list, days_initial_train=2500, days_test=250, threshold_probability_positive=.6) -> tuple:
+def backtest(data: pd.DataFrame, model, predictors: list,
+             days_initial_train: int = 2500, days_test: int = 250,
+             threshold_probability_positive: float = .6) -> tuple:
     """
     Function to backtest the model.
     We train for the first days_initial_train days, and we test the following days_test days.
@@ -82,8 +85,21 @@ def backtest(data: pd.DataFrame, model, predictors:list, days_initial_train=2500
     # return pd.concat(all_predictions)
 
 
-def train_and_deploy(data: pd.DataFrame, predictors:list, start_date_training, end_date_training, estimators=200, sample_split=50,
-                     threshold_probability_positive=.6):
+def train_and_deploy(data: pd.DataFrame, predictors: list,
+                     start_date_training: datetime, end_date_training: datetime,
+                     estimators: int = 200, sample_split: int = 50,
+                     threshold_probability_positive: float = .6):
+    """
+    Train final model and save model parameters.
+    :param data: full dataset
+    :param predictors: list of predictors
+    :param start_date_training: initial date for training
+    :param end_date_training: final date for training
+    :param estimators: number of trees for the forest
+    :param sample_split: number of splits for the forest
+    :param threshold_probability_positive: probability to accept a positive class as positive
+    :return:
+    """
     model = RandomForestClassifier(n_estimators=estimators,  # number of trees: the higher, the better the accuracy
                                    min_samples_split=sample_split,  # the higher, the less accurate, but the less overfits
                                    random_state=1,  # if 1, same initialization
@@ -121,8 +137,9 @@ def train_and_deploy(data: pd.DataFrame, predictors:list, start_date_training, e
 
 
 def create_and_test_random_forest(dataset: pd.DataFrame, predictors_list: list,
-                                  estimators=200, sample_split=50,
-                                  training_days_initial=2500, test_days_step=250, threshold_probability_positive=.6):
+                                  estimators: int = 200, sample_split: int = 50,
+                                  training_days_initial: int = 2500, test_days_step: int = 250,
+                                  threshold_probability_positive: float = .6):
     """
     Create Random Forest model, train and backtest. A random forest classifier was chosen because it is resistant to overfit (due to the
     numerous random trees), runs quickly and handles non-linear relationships.
@@ -200,9 +217,10 @@ def compute_precision_specificity(target_class: list, predicted_class: list) -> 
     return precision, specificity
 
 
-def query_and_prepare_dataset(ticker="^GSPC", prediction_target= "negative",
-                              start_date=datetime.datetime(2000, 1, 1).date(),
-                              previous_days_history=[5]):
+def query_and_prepare_dataset(ticker: str = "^GSPC",
+                              prediction_target: str = "negative",
+                              start_date: datetime = datetime.datetime(2000, 1, 1).date(),
+                              previous_days_history: list = [5]):
 
     # STEP 1: query the historical data of the index from yahoo finance in OHLC ("Open-High-Low-Close") format
     price_history_df = yf.Ticker(ticker)
