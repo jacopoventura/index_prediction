@@ -5,7 +5,21 @@ I want a ML-based system that:
 
 Given N the number of days of the future horizon.
 
+We are option traders, thus we are particularly interested in predicting negative days for two reasons:
+1. sell put in negative days
+2. 0DTE strategies
 
+Let's analyse the following cases (positive class when market up):
+1. Real scenario: market crash
+   Prediction:
+   a. market up (FP) --> catastrophy
+   b. market down (TN) --> OK
+2. Real scenario: market rally
+   Prediction:
+   a. market up (TP) --> OK
+   b. market down (FN) --> false warning, better cautious than aggressive
+
+Thus, we must train a model that MINIMIZES THE FALSE POSITIVES.
 
 Sources to read:
 1. Financial TA in python: https://thepythoncode.com/article/introduction-to-finance-and-technical-indicators-with-python

@@ -39,9 +39,8 @@ def check_prediction_probability_binary(prediction_probabilities: list, threshol
     :param threshold_probability: threshold
     :return: list of predicted classes based on the input probabilities
     """
-    prediction_probabilities[prediction_probabilities >= threshold_probability] = 1
-    prediction_probabilities[prediction_probabilities < threshold_probability] = 0
-    return prediction_probabilities
+    predicted_class = [1 if prob >= threshold_probability else 0 for prob in prediction_probabilities]
+    return predicted_class
 
 
 def backtest(data: pd.DataFrame, model, predictors: list,
@@ -87,26 +86,29 @@ def backtest(data: pd.DataFrame, model, predictors: list,
 
 def train_and_deploy(data: pd.DataFrame, predictors: list,
                      start_date_training: datetime, end_date_training: datetime,
-                     estimators: int = 200, sample_split: int = 50,
-                     threshold_probability_positive: float = .6):
+                     estimators: int = 200, sample_split: int = 50, min_samples_leaf: int = 1,
+                     threshold_probability_positive: float = .6,
+                     positive_target_class: str = "negative"):
     """
     Train final model and save model parameters.
     :param data: full dataset
+    :param positive_target_class: defines the positive class to be predicted
     :param predictors: list of predictors
     :param start_date_training: initial date for training
     :param end_date_training: final date for training
     :param estimators: number of trees for the forest
     :param sample_split: number of splits for the forest
+    :param min_samples_leaf: min_samples_leaf
     :param threshold_probability_positive: probability to accept a positive class as positive
     :return:
     """
     model = RandomForestClassifier(n_estimators=estimators,  # number of trees: the higher, the better the accuracy
                                    min_samples_split=sample_split,  # the higher, the less accurate, but the less overfits
                                    random_state=1,  # if 1, same initialization
+                                   min_samples_leaf=min_samples_leaf,
                                    n_jobs=-1)  # number of cores to be used (-1: max number of cores)
 
-    # to do: specify initial and final dates
-
+    # define train and test dataset
     train_dataset = data.loc[start_date_training:end_date_training].copy()
     test_dataset = data.loc[end_date_training:].copy()
 
@@ -114,7 +116,7 @@ def train_and_deploy(data: pd.DataFrame, predictors: list,
     model.fit(train_dataset[predictors], train_dataset["Target"])
 
     # save model
-    filename = "RF_test.pickle"
+    filename = "RF_" + positive_target_class + ".pickle"
     pickle.dump(model, open(filename, "wb"))
 
     # load model
@@ -131,13 +133,13 @@ def train_and_deploy(data: pd.DataFrame, predictors: list,
     if len(test_dataset["Target"].tolist()) != len(predicted_classes):
         print("ERROR: size error")
         exit()
-    precision, specificity = compute_precision_specificity(test_dataset["Target"].tolist(), predicted_classes)
-    print(f"Precision {precision:.2f},  specificity {specificity:.2f}")
+    precision, recall, specificity = compute_precision_recall_specificity(test_dataset["Target"].tolist(), predicted_classes)
+    print(f"Precision {precision:.2f}, recall {recall:.2f} specificity {specificity:.2f}")
     print(" ")
 
 
 def create_and_test_random_forest(dataset: pd.DataFrame, predictors_list: list,
-                                  estimators: int = 200, sample_split: int = 50,
+                                  estimators: int = 200, sample_split: int = 50, min_sample_leafs: int = 1,
                                   training_days_initial: int = 2500, test_days_step: int = 250,
                                   threshold_probability_positive: float = .6):
     """
@@ -147,6 +149,7 @@ def create_and_test_random_forest(dataset: pd.DataFrame, predictors_list: list,
     :param predictors_list: list of columns of the dataset used for predicting the target
     :param estimators: number of estimators of the random forest model
     :param sample_split: minimum sample split of the random forest model
+    :param min_sample_leafs: min_sample_leafs
     :param training_days_initial: number of trading days for the first training of the backtest
     :param test_days_step: number of trading days for testing
     :param threshold_probability_positive: probability threshold to consider a positive price prediction
@@ -156,6 +159,7 @@ def create_and_test_random_forest(dataset: pd.DataFrame, predictors_list: list,
     model = RandomForestClassifier(n_estimators=estimators,  # number of trees: the higher, the better the accuracy
                                    min_samples_split=sample_split,  # the higher, the less accurate, but the less overfits
                                    random_state=1,  # if 1, same initialization
+                                   min_samples_leaf=min_sample_leafs,
                                    n_jobs=-1)  # number of cores to be used (-1: max number of cores)
 
     # Train and backtest (train inside backtest)
@@ -174,12 +178,14 @@ def create_and_test_random_forest(dataset: pd.DataFrame, predictors_list: list,
     if len(flatten(accumulating_train["Target"])) != len(flatten(accumulating_train["Prediction"])):
         print("ERROR: size error")
         exit()
-    precision_cumulative, specificity_cumulative = compute_precision_specificity(flatten(accumulating_train["Target"]),
-                                                                                 flatten(accumulating_train["Prediction"]))
-    precision_sliding, specificity_sliding = compute_precision_specificity(flatten(sliding_train["Target"]),
-                                                                           flatten(sliding_train["Prediction"]))
-    print(f"Cumulative train: precision {precision_cumulative:.2f},  specificity {specificity_cumulative:.2f}")
-    print(f"Sliding train   : precision {precision_sliding:.2f},  specificity {specificity_sliding:.2f}")
+    precision_cumulative, recall_cumulative, specificity_cumulative = compute_precision_recall_specificity(flatten(accumulating_train["Target"]),
+                                                                                                           flatten(accumulating_train["Prediction"]))
+    precision_sliding, recall_sliding, specificity_sliding = compute_precision_recall_specificity(flatten(sliding_train["Target"]),
+                                                                                                  flatten(sliding_train["Prediction"]))
+    print(f"Cumulative train: precision {precision_cumulative:.2f},  "
+          f"recall {recall_cumulative:.2f}, specificity {specificity_cumulative:.2f}")
+    print(f"Sliding train   : precision {precision_sliding:.2f},  "
+          f"recall {recall_sliding:.2f}, specificity {specificity_sliding:.2f}")
     print(" ")
 
 
@@ -206,21 +212,35 @@ def flatten(input_list: list) -> list:
     return [item for sub_list in input_list for item in sub_list]
 
 
-def compute_precision_specificity(target_class: list, predicted_class: list) -> tuple:
+def compute_precision_recall_specificity(target_class: list, predicted_class: list) -> tuple:
     tn, fp, fn, tp = confusion_matrix(target_class, predicted_class, labels=[0, 1]).ravel()
+    print(f"FP: {fp}, FN: {fn}")
+    # precision: capability to classify the positive class (false positive are important)
     precision = 0.
     if (tp + fp) > 0:
         precision = tp / (tp + fp)
+
+    # recall (sensitivity): capability to classify the positive class (false negative are important)
+    recall = 0.
+    if (tp + fn) > 0:
+        recall = tp / (tp + fn)
+
+    # specificity: capability to classify the negative class
     specificity = 0.
     if (tn + fp) > 0:
         specificity = tn / (tn + fp)
-    return precision, specificity
+
+    return precision, recall, specificity
 
 
 def query_and_prepare_dataset(ticker: str = "^GSPC",
                               prediction_target: str = "negative",
+                              horizon_days_prediction: int = 1,
                               start_date: datetime = datetime.datetime(2000, 1, 1).date(),
-                              previous_days_history: list = [5]):
+                              previous_days_history=None):
+    if previous_days_history is None:
+        previous_days_history = [5]
+    HORIZON_MA_VIX = 5
 
     # STEP 1: query the historical data of the index from yahoo finance in OHLC ("Open-High-Low-Close") format
     price_history_df = yf.Ticker(ticker)
@@ -238,7 +258,7 @@ def query_and_prepare_dataset(ticker: str = "^GSPC",
 
     # STEP 4: calculate the target to be predicted by the ML model.
     # Create a column with the closing price of the day after (which is the movement we want to predict)
-    price_history_df["Tomorrow"] = price_history_df["close"].shift(-1)
+    price_history_df["Tomorrow"] = price_history_df["close"].shift(-horizon_days_prediction)
     # Create the target column: if the next day is positive, then class 1 (positive class).
     price_history_df["Target"] = (price_history_df["Tomorrow"] > price_history_df["close"]).astype(int)
     # In binary classification, the class 1 is treated as the positive class to be predicted.
@@ -298,7 +318,6 @@ def query_and_prepare_dataset(ticker: str = "^GSPC",
     vix.set_index("Trading date", inplace=True)
 
     # TA data
-    HORIZON_MA_VIX = 5
     column_name_sma_vix = f"close_{HORIZON_MA_VIX}_sma"
     vix[column_name_sma_vix]
     vix[column_name_sma_vix] = vix["close"] / vix[column_name_sma_vix]
@@ -338,7 +357,11 @@ def query_and_prepare_dataset(ticker: str = "^GSPC",
     price_history_df = price_history_df.loc[start_date:].copy()
 
     # store the last closed trading day
-    last_closed_trading_day = price_history_df.iloc[-1]
+    now = datetime.datetime.now()
+    if now.hour >= 22:
+        last_closed_trading_day = price_history_df.iloc[-1]
+    else:
+        last_closed_trading_day = price_history_df.iloc[-2]
 
     # remove rows containing at least 1 NaN
     price_history_df = price_history_df.dropna()
