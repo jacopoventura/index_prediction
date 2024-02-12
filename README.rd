@@ -2,7 +2,6 @@ This project aims at building a ML model capable to predict the price movement o
 I want a ML-based system that:
 1- predict if the next day is negative
 2- predict the probabilities of change for each class (>0.5, 0, -0.5, -1, -2)
-3- predict the price
 
 Given N the number of days of the future horizon.
 
