@@ -86,13 +86,13 @@ def backtest(data: pd.DataFrame, model, predictors: list,
 
 def train_and_deploy(data: pd.DataFrame, predictors: list,
                      start_date_training: datetime, end_date_training: datetime,
+                     filename: str,
                      estimators: int = 200, sample_split: int = 50, min_samples_leaf: int = 1,
-                     threshold_probability_positive: float = .6,
-                     positive_target_class: str = "negative"):
+                     threshold_probability_positive: float = .6):
     """
     Train final model and save model parameters.
     :param data: full dataset
-    :param positive_target_class: defines the positive class to be predicted
+    :param filename: filename for paramenters
     :param predictors: list of predictors
     :param start_date_training: initial date for training
     :param end_date_training: final date for training
@@ -116,7 +116,6 @@ def train_and_deploy(data: pd.DataFrame, predictors: list,
     model.fit(train_dataset[predictors], train_dataset["Target"])
 
     # save model
-    filename = "RF_" + positive_target_class + ".pickle"
     pickle.dump(model, open(filename, "wb"))
 
     # load model
@@ -160,6 +159,7 @@ def create_and_test_random_forest(dataset: pd.DataFrame, predictors_list: list,
                                    min_samples_split=sample_split,  # the higher, the less accurate, but the less overfits
                                    random_state=1,  # if 1, same initialization
                                    min_samples_leaf=min_sample_leafs,
+                                   # criterion=,# "squared_error", "absolute_error", "friedman_mse", "poisson"
                                    n_jobs=-1)  # number of cores to be used (-1: max number of cores)
 
     # Train and backtest (train inside backtest)
@@ -240,7 +240,7 @@ def query_and_prepare_dataset(ticker: str = "^GSPC",
                               previous_days_history=None):
     if previous_days_history is None:
         previous_days_history = [5]
-    HORIZON_MA_VIX = 5
+    HORIZON_MA_VIX = 10
 
     # STEP 1: query the historical data of the index from yahoo finance in OHLC ("Open-High-Low-Close") format
     price_history_df = yf.Ticker(ticker)
@@ -283,7 +283,7 @@ def query_and_prepare_dataset(ticker: str = "^GSPC",
         predictors_rsi += [column_name_rsi]
 
     # SMA and ratios with SMA
-    horizons_days_moving_average = [5, 50, 100]
+    horizons_days_moving_average = [22, 50]  # [5, 50]
     predictors_ma = []
     predictors_trend = []
     for horizon in horizons_days_moving_average:
@@ -350,7 +350,7 @@ def query_and_prepare_dataset(ticker: str = "^GSPC",
     # print(sum_errors)
 
     # Associate
-    features_to_associate = ["Close/PDclose", "Open/PDclose"]
+    features_to_associate = ["Close/PDclose"]
     price_history_df, past_features_associated_today_list = add_previous_behavior(price_history_df, previous_days_history, features_to_associate)
 
     # select specific interval

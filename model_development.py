@@ -11,8 +11,6 @@ pd.set_option('display.width', 1000)
 print("Number of available cores: ", multiprocessing.cpu_count(), "\n")
 
 # TO DO
-# 2. try to normalize the data (tutorial simple NN), use only close
-# 3. better understand the data and try to improve with better predictors
 # 6. Try a NN:
 #   6a: the input is an array with values of the predictors. Here predictors should include the tendency of the movement
 #   6b: the input is an array with the last N days (represented by the predictor values as in 6a). The input is the last N days of 10a
@@ -26,10 +24,16 @@ print("Number of available cores: ", multiprocessing.cpu_count(), "\n")
 # 3. There is no difference in setting the positive class to be the positive day or the negative day. Predicted percentages will be switched.
 
 # KPIs:
-# 1. minimize FP: high precision, high specificity (stretch: high sensitivity)
+# minimize the FP -> high precision, high specificity (stretch: high sensitivity)
 # precision = tp / (tp + fp):
 # specificity (recall) = tn / (tn + fp): out of all the times the real class was negative (market down), how many times the model was correct
 # sensitivity = tp / (tp + fn): out of all the times the real class was positive (market up), how many times the model was correct
+
+# HOW TO achieve the KPIs:
+# 1. increase the THRESHOLD_PROBABILITY_POSITIVE_CLASS: the higher the threshold, the higher the precision & specificity
+# 2. increase sample splits
+# 3. increase the number of estimators
+# 4. ridurre TEST_DAYS_STEP ?
 # #######################################################################
 
 # #######################################################################
@@ -55,9 +59,10 @@ print("Number of available cores: ", multiprocessing.cpu_count(), "\n")
 PREDICTION_TARGET = "positive"
 HORIZON_DAYS_PREDICTION = 1
 TRAINING_DAYS_INITIAL = 1000  # number of days for the first training
-TEST_DAYS_STEP = 125  # number of days for the testing the prediction (frequency of new training).
+TEST_DAYS_STEP = 100  # number of days for the testing the prediction (frequency of new training).
 # It indicates how often we should train again the model with most recent data
-THRESHOLD_PROBABILITY_POSITIVE_CLASS = 0.58
+THRESHOLD_PROBABILITY_POSITIVE_CLASS = 0.6
+NUMBER_OF_DAYS_PREVIOUS_DATA = 15
 INITIAL_DATE_OF_DATASET = datetime.datetime(2000, 1, 1).date()
 
 # ============================================== DATASET =======================================
@@ -65,7 +70,7 @@ sp500, predictors_dict, last_closed_trading_day = query_and_prepare_dataset(tick
                                                                             prediction_target=PREDICTION_TARGET,
                                                                             horizon_days_prediction=HORIZON_DAYS_PREDICTION,
                                                                             start_date=INITIAL_DATE_OF_DATASET,
-                                                                            previous_days_history=[5])
+                                                                            previous_days_history=[NUMBER_OF_DAYS_PREVIOUS_DATA])
 
 # behavior of the index
 print("============================== behavior of the index =================================")
@@ -85,25 +90,26 @@ print(" ")
 # plt.show() # plt in place of ax
 predictors_price_change = ["Close/PDclose"]  # , "Open/PDclose", "High/PDclose", "Low/PDclose", "Volume/PDvolume"]
 
-dict_predictors = {"price": ["open", "close", "high", "low", "volume"],
-                   # "price change": predictors_price_change,
-                   # "MA": predictors_dict["ma"],
-                   # "price change, MA": predictors_price_change + predictors_dict["ma"],
-                   # "price change, rsi": predictors_price_change + predictors_dict["rsi"],
-                   # "price change, MA, rsi": predictors_price_change + predictors_dict["ma"] + predictors_dict["rsi"],
-                   "price change, MA, rsi, vix": predictors_price_change + predictors_dict["ma"] + predictors_dict["rsi"] + ["vix", "vix/sma"],
-                   # "price change, MA, rsi, vix, day": predictors_price_change +
+dict_predictors = {#"price": ["open", "close", "high", "low", "volume"],
+                   #"close": ["close"],
+                   #"price change": predictors_price_change,
+                   #"MA": predictors_dict["ma"],
+                   #"price change, MA": predictors_price_change + predictors_dict["ma"],
+                   #"price change, rsi": predictors_price_change + predictors_dict["rsi"],
+                   #"price change, MA, rsi": predictors_price_change + predictors_dict["ma"] + predictors_dict["rsi"],
+                   #"price change, MA, rsi, vix": predictors_price_change + predictors_dict["ma"] + predictors_dict["rsi"] + ["vix", "vix/sma"],
+                   #"price change, MA, rsi, vix, day": predictors_price_change +
                    #                                   predictors_dict["ma"] +
                    #                                   predictors_dict["rsi"] + ["vix", "vix/sma"] + ["Day of year"],
                    "price change, MA, rsi, vix, previous days": predictors_price_change +
                                                                 predictors_dict["ma"] +
-                                                                predictors_dict["rsi"] + ["vix", "vix/sma"] +
+                                                                predictors_dict["rsi"] + ["vix", "vix/sma"] + # + ["macd", "atr"] +
                                                                 predictors_dict["past features"]
                    }
-
+# sp500["vix"] = sp500["vix"] / 80
 estimators = [200]
-sample_splits = [200]
-min_samples_leaf = [2]
+sample_splits = [100]
+min_samples_leaf = [1]
 hyperparameters = [estimators, sample_splits, min_samples_leaf]
 hyperparameters_combinations = list(itertools.product(*hyperparameters))
 
@@ -113,7 +119,7 @@ for key, predictors in dict_predictors.items():
         n_sample_splits = combination[1]
         n_min_samples_leaf = combination[2]
         print("============================== predictors: " + key + " ====================================")
-        print("Estimators: ", n_estimators, "sample splits: ", n_sample_splits, "min sample leafs: ", n_min_samples_leaf)
+        print("Estimators:", n_estimators, "  sample splits:", n_sample_splits, "  min sample leafs:", n_min_samples_leaf)
         create_and_test_random_forest(sp500, predictors,
                                       n_estimators, n_sample_splits, n_min_samples_leaf,
                                       TRAINING_DAYS_INITIAL, TEST_DAYS_STEP, THRESHOLD_PROBABILITY_POSITIVE_CLASS)
@@ -123,16 +129,16 @@ for key, predictors in dict_predictors.items():
                   "We need to train with price data relative to each others.\n")
 
 # ================================== Selected model ==============================
+filename = f"positive_or_negative_{HORIZON_DAYS_PREDICTION}days_RF.pickle"
 selected_predictors = dict_predictors["price change, MA, rsi, vix, previous days"]
 start_date_training = datetime.datetime(2001, 1, 1).date()
 end_date_training = datetime.datetime(2023, 12, 31).date()
 train_and_deploy(sp500, selected_predictors,
-                 start_date_training, end_date_training,
-                 200, 50, 5, THRESHOLD_PROBABILITY_POSITIVE_CLASS, PREDICTION_TARGET)
+                 start_date_training, end_date_training, filename,
+                 estimators[0], sample_splits[0], min_samples_leaf[0], THRESHOLD_PROBABILITY_POSITIVE_CLASS)
 
 # ================================== Deploy ==============================
 # load model
-filename = "RF_" + PREDICTION_TARGET + ".pickle"
 model_loaded = pickle.load(open(filename, "rb"))
 predictions = model_loaded.predict_proba([last_closed_trading_day[selected_predictors]])  # predict the probability of each possible class [0, 1]
 print(predictions)
