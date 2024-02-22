@@ -29,10 +29,6 @@ Sources to read:
 NOTE: the starting scoring is 0.5 (coin toss). everything better than 0.53 (% positive days) is an improvement.
 
 TO DO:
-1. use StockDataFrame (https://github.com/jealous/stockstats/blob/master/README.md)
-    - calculate all the indicators first
-    - select specific columns and train different Random Forest models (with relative change and with full price)
-2. clean and add more scores RandomForest
 3. Understand and clean data preparation RNN
 4. add EURO/USD exchange rate and train
 5. Python tutorial RNN

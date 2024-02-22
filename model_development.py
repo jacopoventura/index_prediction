@@ -3,19 +3,39 @@ import itertools
 import multiprocessing
 import pandas as pd
 import pickle
-from src.helper_ml_train_test import create_and_test_random_forest, train_and_deploy, query_and_prepare_dataset, check_prediction_probability_binary
+import time
+from src.common.helpers_common import query_and_prepare_dataset
+from src.random_forest.helpers_random_forest import (create_and_backtest_random_forest,
+                                                     check_prediction_probability_binary,
+                                                     train_and_deploy_random_forest)
+from src.neural_network.helpers_neural_network import create_and_backtest_neural_network, train_and_deploy_neural_network
 
 pd.set_option('display.max_columns', None)
 pd.set_option('display.max_rows', 500)
 pd.set_option('display.width', 1000)
 print("Number of available cores: ", multiprocessing.cpu_count(), "\n")
 
-# TO DO
-# 6. Try a NN:
-#   6a: the input is an array with values of the predictors. Here predictors should include the tendency of the movement
-#   6b: the input is an array with the last N days (represented by the predictor values as in 6a). The input is the last N days of 10a
+# ##################################################################################################################
+# NEURAL NETWORKS
+# Q: How many output neurons for a binary classification? 1 or 2?
+# A: There is no correct or wrong choice here. The numerical value(s) outputted by the last neuron are meaningless for classification.
+# We can assume that the higher the number, the higher the probability of the corresponding class. However, we need to use an activation function.
+# 1 neuron: Sigmoid activation + Binary Cross-Entropy loss
+# 2 neurons: Softmax* activation + Categorical Cross-Entropy loss
+# *Softmax: maps a vector into a vector of the same size, whose elements are in [0;1] and sum 1
+# Source: https://towardsdatascience.com/deep-learning-which-loss-and-activation-functions-should-i-use-ac02f1c56aa8
 
-# #######################################################################
+# Q: why using batches in training ?
+# A: Epoch: during the training, the model visits the entire training set.
+# The gradient can be calculated by using all the training data or just a subset of it. This subset is called batch or mini-batch.
+# Batch Gradient Descent (or Gradient Descent): the gradient is computed using the entire training set and the model is updated few times.
+# Issues with BGD:
+# 1. huge memory to compute the gradient
+# 2. if non-convex function to minimize, risk to hit a local minima
+# By using small batches, we reduce memory consumption since the gradient is updated with each batch. Also, we reduce the risk of local minima.
+# ##################################################################################################################
+
+# ##################################################################################################################
 # KEY INFO
 # 1. the threshold percentage to accept the predicted positive class does not influence the model's parameters (i.e. the training) directly.
 #    It only influences the choice of the class (the predicted percentages are the same), thus precision and recall, thus the hyperparameters of
@@ -33,18 +53,18 @@ print("Number of available cores: ", multiprocessing.cpu_count(), "\n")
 # 1. increase the THRESHOLD_PROBABILITY_POSITIVE_CLASS: the higher the threshold, the higher the precision & specificity
 # 2. increase sample splits
 # 3. increase the number of estimators
-# 4. ridurre TEST_DAYS_STEP ?
-# #######################################################################
+# 4. reduce TEST_DAYS_STEP ?
+# ##################################################################################################################
 
-# #######################################################################
+# ##################################################################################################################
 # Choice of predictors:
 # VIX: is used because low vix usually means price increase
 # Daily movements with respect to previous close: relative change does not change with the time (like the price). Also, patterns (like recovery
 #       from negative lows) can be recognized and used.
 # Day of the year: possible info on seasonality (ex: october i the most bearish month for stocks)
-# #######################################################################
+# ##################################################################################################################
 
-# #######################################################################
+# ##################################################################################################################
 # Hyperparameters of a random forest
 # n_estimators: number of trees of the forest. The higher this number, the more accurate the model, at cost of more training time.
 # max_features: number of features that are considered when splitting a node in a decision tree. The higher this number, the more accurate model,
@@ -53,7 +73,7 @@ print("Number of available cores: ", multiprocessing.cpu_count(), "\n")
 # at the cost of underfitting.
 # min_samples_leaf: minimum number of samples required to be in a leaf node. The higher this number, the more conservative the model,
 # at the cost of underfitting.
-# #######################################################################
+# ##################################################################################################################
 
 # ============================================= PARAMETERS =====================================
 PREDICTION_TARGET = "positive"
@@ -72,6 +92,8 @@ sp500, predictors_dict, last_closed_trading_day = query_and_prepare_dataset(tick
                                                                             start_date=INITIAL_DATE_OF_DATASET,
                                                                             previous_days_history=[NUMBER_OF_DAYS_PREVIOUS_DATA])
 
+#dataframe_size_mb = sp500.memory_usage(index=True).sum() / 1000000.
+#print(dataframe_size_mb)
 # behavior of the index
 print("============================== behavior of the index =================================")
 print("Number of trading days in the dataset: ", sp500.shape[0])
@@ -90,22 +112,55 @@ print(" ")
 # plt.show() # plt in place of ax
 predictors_price_change = ["Close/PDclose"]  # , "Open/PDclose", "High/PDclose", "Low/PDclose", "Volume/PDvolume"]
 
-dict_predictors = {#"price": ["open", "close", "high", "low", "volume"],
-                   #"close": ["close"],
-                   #"price change": predictors_price_change,
-                   #"MA": predictors_dict["ma"],
-                   #"price change, MA": predictors_price_change + predictors_dict["ma"],
-                   #"price change, rsi": predictors_price_change + predictors_dict["rsi"],
-                   #"price change, MA, rsi": predictors_price_change + predictors_dict["ma"] + predictors_dict["rsi"],
-                   #"price change, MA, rsi, vix": predictors_price_change + predictors_dict["ma"] + predictors_dict["rsi"] + ["vix", "vix/sma"],
-                   #"price change, MA, rsi, vix, day": predictors_price_change +
-                   #                                   predictors_dict["ma"] +
-                   #                                   predictors_dict["rsi"] + ["vix", "vix/sma"] + ["Day of year"],
+dict_predictors = {"price": ["open", "close", "high", "low", "volume"],
+                   "close": ["close"],
+                   "price change": predictors_price_change,
+                   "MA": predictors_dict["ma"],
+                   "price change, MA": predictors_price_change + predictors_dict["ma"],
+                   "price change, rsi": predictors_price_change + predictors_dict["rsi"],
+                   "price change, MA, rsi": predictors_price_change + predictors_dict["ma"] + predictors_dict["rsi"],
+                   "price change, MA, rsi, vix": predictors_price_change + predictors_dict["ma"] + predictors_dict["rsi"] + ["vix", "vix/sma"],
+                   "price change, MA, rsi, vix, day": predictors_price_change +
+                                                      predictors_dict["ma"] +
+                                                      predictors_dict["rsi"] + ["vix", "vix/sma"] + ["Day of year"],
                    "price change, MA, rsi, vix, previous days": predictors_price_change +
                                                                 predictors_dict["ma"] +
                                                                 predictors_dict["rsi"] + ["vix", "vix/sma"] + # + ["macd", "atr"] +
                                                                 predictors_dict["past features"]
                    }
+
+
+# ============================================== Neural Network =================================
+predictors = dict_predictors["price change, MA, rsi, vix, previous days"]
+
+# build a binary classifier NN pytorch
+# https://machinelearningmastery.com/building-a-binary-classification-model-in-pytorch/
+
+parameters_neural_network = {"epochs": 50,
+                             "batch_size": 32,
+                             "learning_rate": 1e-4,
+                             "weight_decay": 1e-5
+                             }
+
+#start = time.time()
+#create_and_backtest_neural_network(sp500, predictors, parameters_neural_network,
+#                                   TRAINING_DAYS_INITIAL, TEST_DAYS_STEP, THRESHOLD_PROBABILITY_POSITIVE_CLASS)
+#duration = time.time() - start
+#print(duration)
+
+print(" ########################### NEURAL NETWORK ###################################")
+for key, predictors in dict_predictors.items():
+    print("============================== predictors: " + key + " ====================================")
+    # print("Estimators:", n_estimators, "  sample splits:", n_sample_splits, "  min sample leafs:", n_min_samples_leaf)
+    # create_and_backtest_neural_network(sp500, predictors, parameters_neural_network,
+    #                                   TRAINING_DAYS_INITIAL, TEST_DAYS_STEP, THRESHOLD_PROBABILITY_POSITIVE_CLASS)
+
+
+print("")
+
+# ============================================== Random Forest =================================
+print(" ########################### RANDOM FOREST ###################################")
+
 # sp500["vix"] = sp500["vix"] / 80
 estimators = [200]
 sample_splits = [100]
@@ -118,11 +173,13 @@ for key, predictors in dict_predictors.items():
         n_estimators = combination[0]
         n_sample_splits = combination[1]
         n_min_samples_leaf = combination[2]
+        parameters_random_forest = {"n_estimators": n_estimators,
+                                    "n_samples_split": n_sample_splits,
+                                    "n_min_samples_leaf": n_min_samples_leaf}
         print("============================== predictors: " + key + " ====================================")
         print("Estimators:", n_estimators, "  sample splits:", n_sample_splits, "  min sample leafs:", n_min_samples_leaf)
-        create_and_test_random_forest(sp500, predictors,
-                                      n_estimators, n_sample_splits, n_min_samples_leaf,
-                                      TRAINING_DAYS_INITIAL, TEST_DAYS_STEP, THRESHOLD_PROBABILITY_POSITIVE_CLASS)
+        create_and_backtest_random_forest(sp500, predictors, parameters_random_forest,
+                                          TRAINING_DAYS_INITIAL, TEST_DAYS_STEP, THRESHOLD_PROBABILITY_POSITIVE_CLASS)
         if key == "price":
             print("NOTE: performance of the basic model are poor because it is trained with absolute values of the index. \n"
                   "In fact, if years ago the index price was 10 and now is 100, the model hardly recognizes the patterns. \n"
@@ -133,9 +190,18 @@ filename = f"positive_or_negative_{HORIZON_DAYS_PREDICTION}days_RF.pickle"
 selected_predictors = dict_predictors["price change, MA, rsi, vix, previous days"]
 start_date_training = datetime.datetime(2001, 1, 1).date()
 end_date_training = datetime.datetime(2023, 12, 31).date()
-train_and_deploy(sp500, selected_predictors,
-                 start_date_training, end_date_training, filename,
-                 estimators[0], sample_splits[0], min_samples_leaf[0], THRESHOLD_PROBABILITY_POSITIVE_CLASS)
+parameters_random_forest = {"n_estimators": estimators[0],
+                            "n_samples_split": sample_splits[0],
+                            "n_min_samples_leaf": min_samples_leaf[0]}
+train_and_deploy_random_forest(sp500, selected_predictors, parameters_random_forest,
+                               start_date_training, end_date_training, filename,
+                               THRESHOLD_PROBABILITY_POSITIVE_CLASS)
+
+train_and_deploy_neural_network(sp500, selected_predictors, parameters_neural_network,
+                                start_date_training, end_date_training, "test",
+                                THRESHOLD_PROBABILITY_POSITIVE_CLASS)
+
+exit()
 
 # ================================== Deploy ==============================
 # load model
