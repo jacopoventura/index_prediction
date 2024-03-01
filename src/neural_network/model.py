@@ -26,7 +26,9 @@ class NeuralNetworkPricePositiveNegative(nn.Module):
         # Hidden layers of neurons
         self.layer1 = nn.Linear(num_input_features, num_neurons_h1)
         self.layer2 = nn.Linear(num_neurons_h1, num_neurons_h2)
-        # self.layer3 = nn.Linear(num_neurons_h2, num_neurons_h2)
+        self.layer3 = nn.Linear(num_neurons_h2, num_neurons_h2)
+        #self.layer4 = nn.Linear(100, 50)
+        #self.layer5 = nn.Linear(50, 50)
 
         # The last neuron layer shall output 1 scalar, because we have a scalar target (class 0 or 1)
         self.output = nn.Linear(num_neurons_h2, 1)
@@ -76,6 +78,8 @@ class NeuralNetworkPricePositiveNegative(nn.Module):
         x = self.activation(self.layer1(x))
         x = self.activation(self.layer2(x))
         # x = self.activation(self.layer3(x))
+        # x = self.activation(self.layer4(x))
+        # x = self.activation(self.layer5(x))
         x = self.output(x)
         x = self.sigmoid(x)
 

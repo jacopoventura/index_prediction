@@ -28,7 +28,7 @@ def train_neural_network(train_dataloader, parameters_model: dict, size_input: i
 
     # Instantiate the model
     torch.manual_seed(41)
-    model = NeuralNetworkPricePositiveNegative(size_input, 40, 20)
+    model = NeuralNetworkPricePositiveNegative(size_input, 100, 50)
 
     # Choose loss function
     # requires y.unsqueeze(1) because size must be [size_batch, 1]
@@ -44,6 +44,8 @@ def train_neural_network(train_dataloader, parameters_model: dict, size_input: i
         lr=parameters_model["learning_rate"],
         weight_decay=parameters_model["weight_decay"]
     )
+
+    optimizer = torch.optim.SGD(model.parameters(), lr=parameters_model["learning_rate"])
 
     # if torch.backends.mps.is_available():  # Train on GPU if possible
     #   mps_device = torch.device("mps")

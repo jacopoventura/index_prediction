@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import confusion_matrix
 from stockstats import StockDataFrame
+from sklearn.preprocessing import StandardScaler
 
 
 def split_dataset_with_index(dataset: pd.DataFrame, index_start_training: int, index_end_training: int, length_test_dataset: int) -> tuple:
@@ -33,12 +34,12 @@ def split_dataset_with_date(dataset: pd.DataFrame, start_date_training, end_date
     return train_dataset, test_dataset
 
 
-def compute_precision_recall_specificity(target_class: list, predicted_class: list) -> tuple:
+def compute_precision_recall_specificity(target_class: list, predicted_class: list) -> dict:
     """
     Compute precision, recall and specificity for a binary classifier.
     :param target_class: target class (list)
     :param predicted_class: predicted target class (list)
-    :return: precision, recall, specificity scores
+    :return: precision, recall, specificity, accuracy scores (dictionary)
     """
     tn, fp, fn, tp = confusion_matrix(target_class, predicted_class, labels=[0, 1]).ravel()
     print(f"FP: {fp}, FN: {fn}")
@@ -57,25 +58,33 @@ def compute_precision_recall_specificity(target_class: list, predicted_class: li
     if (tn + fp) > 0:
         specificity = tn / (tn + fp)
 
-    return precision, recall, specificity
+    # accuracy
+    accuracy = 0.
+    if len(target_class)>0:
+        accuracy = (tp + tn)/len(target_class)
+
+    return {"precision": precision, "recall": recall, "specificity": specificity, "accuracy": accuracy}
 
 
-def print_cumulative_sliding_scores(precision_cumulative: float, recall_cumulative: float, specificity_cumulative: float,
-                                    precision_sliding: float, recall_sliding: float, specificity_sliding: float) -> None:
+def print_cumulative_sliding_scores(scores_cumulative: dict, scores_sliding: dict) -> None:
     """
     Print performance of the binary predictor for cumulative and sliding trainings.
-    :param precision_cumulative: precision in case of cumulative training
-    :param recall_cumulative: recall in case of cumulative training
-    :param specificity_cumulative: specificity in case of cumulative training
-    :param precision_sliding: precision in case of sliding training
-    :param recall_sliding: recall in case of sliding training
-    :param specificity_sliding: specificity in case of sliding training
+    :param scores_cumulative: dictionary of scores in case of cumulative training
+    :param scores_sliding: dictionary of scores in case of cumulative training
     :return None
     """
-    print(f"Cumulative train: precision {precision_cumulative:.2f},  "
-          f"recall {recall_cumulative:.2f}, specificity {specificity_cumulative:.2f}")
-    print(f"Sliding train   : precision {precision_sliding:.2f},  "
-          f"recall {recall_sliding:.2f}, specificity {specificity_sliding:.2f}")
+    precision = scores_cumulative["precision"]
+    recall = scores_cumulative["recall"]
+    specificity = scores_cumulative["specificity"]
+    accuracy = scores_cumulative["accuracy"]
+    print(f"Cumulative train: precision {precision:.2f},  "
+          f"recall {recall:.2f}, specificity {specificity:.2f}, accuracy {accuracy:.2f}")
+    precision = scores_sliding["precision"]
+    recall = scores_sliding["recall"]
+    specificity = scores_sliding["specificity"]
+    accuracy = scores_sliding["accuracy"]
+    print(f"Sliding train: precision {precision:.2f},  "
+          f"recall {recall:.2f}, specificity {specificity:.2f}, accuracy {accuracy:.2f}")
     print(" ")
 
 
@@ -142,6 +151,18 @@ def query_and_prepare_dataset(ticker: str = "^GSPC",
 
     # MACD
     price_history_df["macd"]
+    price_history_df["close/macd"] = price_history_df["close"] / price_history_df["macd"]
+
+    # Aroon oscillator
+    price_history_df["aroon"]
+    price_history_df["aroon"] = price_history_df["aroon"] / 100
+
+    # ADX
+    price_history_df["adx"]
+
+    # Bollinger band
+    price_history_df["boll"]
+    price_history_df["close/boll"] = price_history_df["close"] / price_history_df["boll"]
 
     # RSI
     periods_rsi = [5, 14]
@@ -243,6 +264,10 @@ def query_and_prepare_dataset(ticker: str = "^GSPC",
     price_history_df[price_history_df.select_dtypes(np.float64).columns] = price_history_df.select_dtypes(np.float64).astype(np.float32)
     price_history_df[price_history_df.select_dtypes(np.int64).columns] = price_history_df.select_dtypes(np.int64).astype(np.float32)
 
+    #scaler = StandardScaler()
+    #columns_to_scale = price_history_df.columns[price_history_df.columns != "Target"]
+    #price_history_df[columns_to_scale] = scaler.fit_transform(price_history_df[columns_to_scale])
+
     return price_history_df, predictors_dict, last_closed_trading_day
 
 
@@ -258,9 +283,26 @@ def check_prediction_probability_binary(prediction_probabilities: list, threshol
 
 
 def stats_cumulative_sliding_train(cumulative_training, sliding_training):
-    precision_cumulative, recall_cumulative, specificity_cumulative = compute_precision_recall_specificity(flatten(cumulative_training["Target"]),
-                                                                                                           flatten(cumulative_training["Prediction"]))
-    precision_sliding, recall_sliding, specificity_sliding = compute_precision_recall_specificity(flatten(sliding_training["Target"]),
-                                                                                                  flatten(sliding_training["Prediction"]))
-    print_cumulative_sliding_scores(precision_cumulative, recall_cumulative, specificity_cumulative,
-                                    precision_sliding, recall_sliding, specificity_sliding)
+    scores_cumulative = compute_precision_recall_specificity(flatten(cumulative_training["Target"]),
+                                                             flatten(cumulative_training["Prediction"]))
+    scores_sliding = compute_precision_recall_specificity(flatten(sliding_training["Target"]),
+                                                          flatten(sliding_training["Prediction"]))
+    print_cumulative_sliding_scores(scores_cumulative, scores_sliding)
+    scores_cumulative_last = compute_precision_recall_specificity(cumulative_training["Target"][-1],
+                                                                  cumulative_training["Prediction"][-1])
+    scores_sliding_last = compute_precision_recall_specificity(sliding_training["Target"][-1],
+                                                               sliding_training["Prediction"][-1])
+    precision = scores_cumulative_last["precision"]
+    recall = scores_cumulative_last["recall"]
+    specificity = scores_cumulative_last["specificity"]
+    accuracy = scores_cumulative_last["accuracy"]
+    print(f"Last cumulative train: precision {precision:.2f},  "
+          f"recall {recall:.2f}, specificity {specificity:.2f}, accuracy {accuracy:.2f}")
+    precision = scores_sliding_last["precision"]
+    recall = scores_sliding_last["recall"]
+    specificity = scores_sliding_last["specificity"]
+    accuracy = scores_sliding_last["accuracy"]
+    print(f"Last sliding train: precision {precision:.2f},  "
+          f"recall {recall:.2f}, specificity {specificity:.2f}, accuracy {accuracy:.2f}")
+
+

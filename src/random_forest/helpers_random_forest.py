@@ -140,8 +140,12 @@ def train_and_deploy_random_forest(data: pd.DataFrame, predictors: list,
     if len(test_dataset["Target"].tolist()) != len(predicted_classes):
         print("ERROR: size error")
         exit()
-    precision, recall, specificity = compute_precision_recall_specificity(test_dataset["Target"].tolist(), predicted_classes)
-    print(f"Precision {precision:.2f}, recall {recall:.2f} specificity {specificity:.2f}")
+    score = compute_precision_recall_specificity(test_dataset["Target"].tolist(), predicted_classes)
+    precision = score["precision"]
+    recall = score["recall"]
+    specificity = score["specificity"]
+    accuracy = score["accuracy"]
+    print(f"Precision {precision:.2f}, recall {recall:.2f} specificity {specificity:.2f} accuracy {accuracy:.2f}")
     print(" ")
 
 
