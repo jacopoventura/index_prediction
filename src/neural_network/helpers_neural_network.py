@@ -229,7 +229,7 @@ def create_and_backtest_neural_network(dataset: pd.DataFrame, predictors_list: l
     :param test_days_step: length of the test window
     :param threshold_probability_positive: probability threshold to accept class q as output from the model
     """
-    print("ATTENTION: as of February 2024, training on mps M1 does not converge. CPU must be used!")
+    # print("ATTENTION: as of February 2024, training on mps M1 does not converge. CPU must be used!")
 
     # Backtest the model
     cumulative_training, sliding_training = train_and_backtest(dataset, predictors_list, parameters_neural_network,
@@ -246,6 +246,8 @@ def create_and_backtest_neural_network(dataset: pd.DataFrame, predictors_list: l
     if len(flatten(cumulative_training["Target"])) != len(flatten(cumulative_training["Prediction"])):
         print("ERROR: size error")
         exit()
+    print(" ")
+    print(predictors_list)
     stats_cumulative_sliding_train(cumulative_training, sliding_training)
 
 
@@ -263,29 +265,3 @@ def predict(trained_model, x_df: pd.DataFrame) -> pd.Series:
 
     return pd.Series(prediction.detach().numpy(), index=x_df.index)
 
-
-# def _draw_chart(y_series: pd.Series):
-#    y_series.plot.hist(bins=50, label='Target Returns')
-#
-#    # Draw Gaussian curve
-#    mu, stdev = norm.fit(y_series)
-#    xmin, xmax = plt.xlim()
-#    x = np.linspace(xmin, xmax, 50)
-#    p = norm.pdf(x, mu, stdev)
-#    p *= y_series.shape[0] / p.sum()
-#
-#    plt.plot(x, p, 'k', linewidth=2, label='Gaussian Curve')
-#    plt.legend()
-
-# def chart_y_histogram(y_series: pd.Series):
-#    """
-#    Create charts that contain the histogram of the inputs and compares them against Normal distributions.
-#    :param y_series: Data to create charts for.
-#    """
-#    _draw_chart(y_series)
-#    plt.show()
-#
-#    _draw_chart(y_series)
-#    xmin, _ = plt.xlim()
-#    plt.axis([xmin, -0.015, 0, 10])
-#    plt.show()

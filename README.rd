@@ -27,9 +27,3 @@ Sources to read:
 3. https://github.com/DestrosCMC/Forecasting-SPY/blob/main/README.md
 
 NOTE: the starting scoring is 0.5 (coin toss). everything better than 0.53 (% positive days) is an improvement.
-
-TO DO:
-3. Understand and clean data preparation RNN
-4. add EURO/USD exchange rate and train
-5. Python tutorial RNN
-6. use normalization in Random Forest ?
