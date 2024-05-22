@@ -152,32 +152,32 @@ if __name__ == '__main__':
     INITIAL_DATE_OF_DATASET = datetime.datetime(2000, 1, 1).date()
 
     # ============================================== DATASET =======================================
-    sp500, predictors_dict, last_closed_trading_day = query_and_prepare_dataset(ticker="^GSPC",
-                                                                                prediction_target=PREDICTION_TARGET,
-                                                                                horizon_days_prediction=HORIZON_DAYS_PREDICTION,
-                                                                                start_date=INITIAL_DATE_OF_DATASET,
-                                                                                previous_days_history=[NUMBER_OF_DAYS_PREVIOUS_DATA])
+    price_history_df, predictors_dict, last_closed_trading_day = query_and_prepare_dataset(ticker="^GSPC",
+                                                                                           prediction_target=PREDICTION_TARGET,
+                                                                                           horizon_days_prediction=HORIZON_DAYS_PREDICTION,
+                                                                                           start_date=INITIAL_DATE_OF_DATASET,
+                                                                                           previous_days_history=[NUMBER_OF_DAYS_PREVIOUS_DATA])
 
-    sp500["vix"] = sp500["vix"] / 80
+    price_history_df["vix"] = price_history_df["vix"] / 80
 
-    # dataframe_size_mb = sp500.memory_usage(index=True).sum() / 1000000.
+    # dataframe_size_mb = price_history_df.memory_usage(index=True).sum() / 1000000.
     # print(dataframe_size_mb)
 
     # behavior of the price
-    behavior_of_the_price(sp500)
+    behavior_of_the_price(price_history_df)
 
     # ############################### PATTERN MATCHING #####################
     # plt.figure(figsize=(16,5))
     # plt.style.use("seaborn-v0_8-whitegrid")
-    # plt.plot(sp500.iloc[2000:2100]["Target"], label="index", c="#4ac2fb")
-    # plt.plot(sp500.iloc[2001:2010]["Target"], lw=3, label="Pattern (9d)", c="#ff4e97")
+    # plt.plot(price_history_df.iloc[2000:2100]["Target"], label="index", c="#4ac2fb")
+    # plt.plot(price_history_df.iloc[2001:2010]["Target"], lw=3, label="Pattern (9d)", c="#ff4e97")
     # plt.legend(frameon=True, fancybox=True, framealpha=.9, loc=1)
     # plt.title("Pattern in testing set", fontsize=15)
     # plt.ylabel("return")
     # plt.show()
 
     """
-    train_dataset, test_dataset = split_dataset_with_date(sp500, INITIAL_DATE_OF_DATASET, datetime.datetime(2023, 9, 30).date())
+    train_dataset, test_dataset = split_dataset_with_date(price_history_df, INITIAL_DATE_OF_DATASET, datetime.datetime(2023, 9, 30).date())
 
     # pattern_matching_original(binary_train, binary_test)
     pattern_length_list = [[5, 6], [7, 8], [9, 10], [11, 12], [13], [14], [15], [16]]
@@ -197,7 +197,7 @@ if __name__ == '__main__':
         learned_pattern_dict["accuracy"] += pattern["accuracy"]
 
     pattern_matching_algo.set_learned_patterns(learned_pattern_dict)
-    pattern_matching_algo.export_learned_patterns("learned_patterns")
+    pattern_matching_algo.export_learned_patterns("trained models/learned_patterns")
 
     pattern_matching_algo.test(test_dataset["Target"].to_list())
 
@@ -206,44 +206,44 @@ if __name__ == '__main__':
     #######################
 
     # This plot is crashing the script due to a bug with macOS
-    # sp500_plot = sp500.plot.line(y="Close", use_index=True)
+    # price_history_df_plot = price_history_df.plot.line(y="Close", use_index=True)
     # plt.show() # plt in place of ax
     predictors_price_change = ["Close/PDclose"]  # , "Open/PDclose", "High/PDclose", "Low/PDclose", "Volume/PDvolume"]
 
-    dict_predictors = {#"price": ["open", "close", "high", "low", "volume"],
-                       #"close": ["close"],
+    dict_predictors = {
+                       # "price": ["open", "close", "high", "low", "volume"],
+                       # "close": ["close"],
                        "price change": predictors_price_change,
                        # "MA": predictors_dict["ma"],
                        "price change, MA": predictors_price_change + predictors_dict["ma"],
-                       #"price change, MA, bollinger": predictors_price_change + predictors_dict["ma"] + ["close/boll"],
-                       #"price change, rsi": predictors_price_change + predictors_dict["rsi"],
-                       #"price change, MA, rsi": predictors_price_change + predictors_dict["ma"] + predictors_dict["rsi"],
-                       #"price change, MA, rsi, vix": predictors_price_change + predictors_dict["ma"] + predictors_dict["rsi"] + ["vix", "vix/sma"],
-                       #"price change, MA, rsi, vix, MACD": predictors_price_change + predictors_dict["ma"] +
+                       # "price change, MA, bollinger": predictors_price_change + predictors_dict["ma"] + ["close/boll"],
+                       # "price change, rsi": predictors_price_change + predictors_dict["rsi"],
+                       # "price change, MA, rsi": predictors_price_change + predictors_dict["ma"] + predictors_dict["rsi"],
+                       # "price change, MA, rsi, vix": predictors_price_change + predictors_dict["ma"] + predictors_dict["rsi"] + ["vix", "vix/sma"],
+                       # "price change, MA, rsi, vix, MACD": predictors_price_change + predictors_dict["ma"] +
                        #                                    predictors_dict["rsi"] + ["vix", "vix/sma"] +
                        #                                    ["close/macd"],
-                       #"price change, MA, rsi, vix, aroon": predictors_price_change + predictors_dict["ma"] +
+                       # "price change, MA, rsi, vix, aroon": predictors_price_change + predictors_dict["ma"] +
                        #                                    predictors_dict["rsi"] + ["vix", "vix/sma"] +
                        #                                    ["aroon"],
-                       #"price change, MA, rsi, vix, bollinger": predictors_price_change + predictors_dict["ma"] +
+                       # "price change, MA, rsi, vix, bollinger": predictors_price_change + predictors_dict["ma"] +
                        #                                     predictors_dict["rsi"] + ["vix", "vix/sma"] +
                        #                                     ["close/boll"],
-                       #"price change, MA, rsi, vix, adx": predictors_price_change + predictors_dict["ma"] +
+                       # "price change, MA, rsi, vix, adx": predictors_price_change + predictors_dict["ma"] +
                        #                                         predictors_dict["rsi"] + ["vix", "vix/sma"] +
                        #                                         ["adx"],
-                       #"price change, MA, rsi, vix, day": predictors_price_change +
+                       # "price change, MA, rsi, vix, day": predictors_price_change +
                        #                                  predictors_dict["ma"] +
                        #                                  predictors_dict["rsi"] + ["vix", "vix/sma"] + ["Day of year"],
-                       #"price change, MA, rsi, vix, previous days": predictors_price_change +
+                       # "price change, MA, rsi, vix, previous days": predictors_price_change +
                        #                                            predictors_dict["ma"] +
                        #                                            predictors_dict["rsi"] + ["vix", "vix/sma"] + # + ["macd", "atr"] +
                        #                                            predictors_dict["past features"]
-                       #"all": predictors_price_change + predictors_dict["ma"] +
+                       # "all": predictors_price_change + predictors_dict["ma"] +
                        #                                 predictors_dict["rsi"] + ["vix", "vix/sma"] +
                        #                                 ["close/macd"] + ["aroon"] + ["close/boll"] + ["adx"] +
                        #                                 predictors_dict["past features"]
                        }
-
 
     # ============================================== Neural Network =================================
     # predictors = dict_predictors["price change, MA, rsi, vix, previous days"]
@@ -257,25 +257,24 @@ if __name__ == '__main__':
                                  "weight_decay": 0.0001
                                  }
 
-    #start = time.time()
-    #create_and_backtest_neural_network(sp500, predictors, parameters_neural_network,
+    # start = time.time()
+    # create_and_backtest_neural_network(price_history_df, predictors, parameters_neural_network,
     #                                   TRAINING_DAYS_INITIAL, TEST_DAYS_STEP, THRESHOLD_PROBABILITY_POSITIVE_CLASS)
-    #duration = time.time() - start
-    #print(duration)
+    # duration = time.time() - start
+    # print(duration)
 
     print(" ########################### NEURAL NETWORK ###################################")
     inputs_iterable = []
     for key, predictors in dict_predictors.items():
-        inputs_iterable.append((sp500, predictors, parameters_neural_network,
+        inputs_iterable.append((price_history_df, predictors, parameters_neural_network,
                                        TRAINING_DAYS_INITIAL, TEST_DAYS_STEP, THRESHOLD_PROBABILITY_POSITIVE_CLASS))
     with mp.Pool() as pool:
         pool.starmap(create_and_backtest_neural_network, inputs_iterable)
 
     # for key, predictors in dict_predictors.items():
     #     print("============================== predictors: " + key + " ====================================")
-    #     create_and_backtest_neural_network(sp500, predictors, parameters_neural_network,
+    #     create_and_backtest_neural_network(price_history_df, predictors, parameters_neural_network,
     #                                    TRAINING_DAYS_INITIAL, TEST_DAYS_STEP, THRESHOLD_PROBABILITY_POSITIVE_CLASS)
-
 
     # ============================================== Random Forest =================================
     print(" ########################### RANDOM FOREST ###################################")
@@ -303,8 +302,8 @@ if __name__ == '__main__':
                   "  sample splits:", n_sample_splits,
                   "  min sample leafs:", n_min_samples_leaf,
                   "  prob threshold:", n_threshold)
-            #create_and_backtest_random_forest(sp500, predictors, parameters_random_forest,
-            #                                  TRAINING_DAYS_INITIAL, TEST_DAYS_STEP, n_threshold)
+            # create_and_backtest_random_forest(price_history_df, predictors, parameters_random_forest,
+            #                                   TRAINING_DAYS_INITIAL, TEST_DAYS_STEP, n_threshold)
             if key == "price":
                 print("NOTE: performance of the basic model are poor because it is trained with absolute values of the index. \n"
                       "In fact, if years ago the index price was 10 and now is 100, the model hardly recognizes the patterns. \n"
@@ -316,7 +315,7 @@ if __name__ == '__main__':
     # specificity: .51
     # accuracy: .51
     # Last batch: .71, .56., .59
-    filename = f"positive_or_negative_{HORIZON_DAYS_PREDICTION}days_RF.pickle"
+    filename = f"trained models/positive_or_negative_{HORIZON_DAYS_PREDICTION}days_RF.pickle"
     selected_predictors = dict_predictors["price change"]
     start_date_training = INITIAL_DATE_OF_DATASET
     end_date_training = datetime.datetime(2023, 9, 30).date()
@@ -324,11 +323,11 @@ if __name__ == '__main__':
                                 "n_samples_split": sample_splits[0],
                                 "n_min_samples_leaf": min_samples_leaf[0]}
     THRESHOLD_PROBABILITY_POSITIVE_CLASS = .53
-    train_and_deploy_random_forest(sp500, selected_predictors, parameters_random_forest,
+    train_and_deploy_random_forest(price_history_df, selected_predictors, parameters_random_forest,
                                    start_date_training, end_date_training, filename,
                                    THRESHOLD_PROBABILITY_POSITIVE_CLASS)
 
-    #train_and_deploy_neural_network(sp500, selected_predictors, parameters_neural_network,
+    # train_and_deploy_neural_network(price_history_df, selected_predictors, parameters_neural_network,
     #                                start_date_training, end_date_training, "test",
     #                                THRESHOLD_PROBABILITY_POSITIVE_CLASS)
 
