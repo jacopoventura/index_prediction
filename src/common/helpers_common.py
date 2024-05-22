@@ -510,7 +510,8 @@ def calc_relative_change_with_levels(start_price_list: np.array, end_price_list:
         pct_change = [calc_price_change(start_price_list[i], end_price_list[i]) for i in range(len_data)]
         category_pct_change = [calc_change_category(pct) for pct in pct_change]
     else:
-        start_price_list = float(start_price_list)
+        start_price_list = float(start_price_list[0])
+        end_price_list = float(end_price_list[0])
         is_positive_change = [1 if end_price_list > start_price_list else 0]
         pct_change = [calc_price_change(start_price_list, end_price_list)]
         category_pct_change = [calc_change_category(pct_change[0])]

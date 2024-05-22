@@ -112,6 +112,9 @@ if not USE_MODEL_ONLY:
     f = open(MODEL_PATH + "/bias.dat", "w+")
     f.write(str(bias))
     f.close()
+    f = open(MODEL_PATH + "/scale.dat", "w+")
+    f.write(str(SCALE))
+    f.close()
 
     # STEP 7: test the trained model
     # get the final dataframe for the testing set
@@ -153,7 +156,7 @@ if not USE_MODEL_ONLY:
 
 
 # ======================================================================================
-#                               USE THE MODEL AS PRODUCT
+#                           MODEL USAGE (PRODUCT BUSINESS LOGIC)
 # ======================================================================================
 
 # Load model
@@ -161,13 +164,16 @@ final_model = tf.saved_model.load(MODEL_PATH)
 f = open(MODEL_PATH + "/bias.dat", "r")
 final_bias = float(f.read())
 f.close()
+f = open(MODEL_PATH + "/scale.dat", "r")
+SCALE = bool(f.read())
+f.close()
 
 print("\n=========================== PRICE PREDICTION ==================================")
 # define model input (here I can select one specific close from the list)
 model_input = last_sequence_dict["sequence"]
 number_of_days_to_predict = model_input.shape[0]
-price_future = final_model(model_input)
-if price_future[0][0] <= 1:
+price_future = final_model(model_input).numpy().tolist()
+if SCALE:
     price_future = np.squeeze(column_scaler["close"].inverse_transform(price_future), 1)
     last_sequence_dict["close"] = np.squeeze(column_scaler["close"].inverse_transform(np.expand_dims(last_sequence_dict["close"], 1)), 1)
 # apply bias
