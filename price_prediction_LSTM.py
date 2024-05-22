@@ -18,7 +18,7 @@ warnings.filterwarnings("ignore")
 
 # =================== MAIN ===============
 ticker = "SPY"
-USE_MODEL_ONLY = True
+USE_MODEL_ONLY = False
 PREVIOUS_DAYS_HISTORY = 30  # best results with 25-30
 LOOKUP_STEP = 1
 MODEL_FILENAME = "LSTM_" + ticker + f"_horizon_{LOOKUP_STEP}_history_{PREVIOUS_DAYS_HISTORY}"
