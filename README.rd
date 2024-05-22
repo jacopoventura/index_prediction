@@ -10,6 +10,10 @@ We are option traders, thus we are particularly interested in predicting negativ
 2. 0DTE strategies
 3. avoid rolling of naked puts
 
+Scripts:
+1. price_change_prediction_NN_and_PATTERNS.py: first ML test with simple RF, NN and learned patterns
+
+
 Sources to read:
 1. Financial TA in python: https://thepythoncode.com/article/introduction-to-finance-and-technical-indicators-with-python
 2. Tutorial RNN: https://thepythoncode.com/article/stock-price-prediction-in-python-using-tensorflow-2-and-keras?utm_content=cmp-true
