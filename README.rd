@@ -12,7 +12,7 @@ We are option traders, thus we are particularly interested in predicting negativ
 
 Scripts:
 1. price_change_prediction_NN_and_PATTERNS.py: first ML test with simple RF, NN and learned patterns
-
+2. price_prediction_LSTM.py: training of final LSTM model and product business logic
 
 Sources to read:
 1. Financial TA in python: https://thepythoncode.com/article/introduction-to-finance-and-technical-indicators-with-python
