@@ -1,3 +1,7 @@
+AGPL-3.0-only
+
+Copywright (c) 2024 Jacopo Ventura
+
 This project builds a ML model capable to predict the price movement of a stock market ticker.
 The business logic of the product (query data, preparation of data ans model usage) is also provided in the main script.
 
