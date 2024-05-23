@@ -1,5 +1,4 @@
 from torch import nn
-import torch
 
 # Sources:
 # https://www.enthought.com/blog/neural-network-output-layer/

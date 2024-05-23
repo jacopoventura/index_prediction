@@ -14,6 +14,14 @@ Scripts:
 1. price_change_prediction_NN_and_PATTERNS.py: first ML test with simple RF, NN and learned patterns
 2. price_prediction_LSTM.py: training of final LSTM model and product business logic
 
+Library requirements:
+1. tensorflow 2.15.0
+2. stockstats 0.6.2
+3. yfinance
+4. sklearn
+5. torch 2.2.0
+6. standard py libraries: pd, np, datetime, ...
+
 Sources to read:
 1. Financial TA in python: https://thepythoncode.com/article/introduction-to-finance-and-technical-indicators-with-python
 2. Tutorial RNN: https://thepythoncode.com/article/stock-price-prediction-in-python-using-tensorflow-2-and-keras?utm_content=cmp-true

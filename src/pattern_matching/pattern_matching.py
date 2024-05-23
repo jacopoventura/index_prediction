@@ -1,6 +1,5 @@
 from sklearn.metrics import accuracy_score, precision_score, confusion_matrix
 import pickle
-# import ray
 
 
 class PatternMatching:

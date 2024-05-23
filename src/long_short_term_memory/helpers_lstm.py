@@ -3,7 +3,6 @@ import pandas as pd
 import tensorflow as tf
 import random
 import datetime
-from sklearn import preprocessing
 from sklearn.utils import shuffle
 from sklearn.model_selection import train_test_split
 from src.common.helpers_common import extract_close_from_sequence
