@@ -1,5 +1,6 @@
-import datetime
+# Copyright (c) 2024 Jacopo Ventura
 
+import datetime
 import numpy as np
 import pandas as pd
 import pytz as pytz

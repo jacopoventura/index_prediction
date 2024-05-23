@@ -1,3 +1,5 @@
+# Copyright (c) 2024 Jacopo Ventura
+
 from sklearn.metrics import accuracy_score, precision_score, confusion_matrix
 import pickle
 

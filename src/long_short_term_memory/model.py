@@ -1,3 +1,5 @@
+# Copyright (c) 2024 Jacopo Ventura
+
 from tensorflow.keras import Sequential
 from tensorflow.keras.layers import LSTM, Dense, Dropout, Bidirectional
 

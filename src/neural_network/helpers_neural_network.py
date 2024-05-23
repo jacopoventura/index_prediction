@@ -1,3 +1,5 @@
+# Copyright (c) 2024 Jacopo Ventura
+
 import copy
 import datetime
 import pickle

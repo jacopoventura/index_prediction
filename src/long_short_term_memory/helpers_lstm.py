@@ -1,3 +1,5 @@
+# Copyright (c) 2024 Jacopo Ventura
+
 import numpy as np
 import pandas as pd
 import tensorflow as tf

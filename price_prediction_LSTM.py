@@ -1,5 +1,6 @@
-import os
+# Copyright (c) 2024 Jacopo Ventura
 
+import os
 from src.long_short_term_memory.model import *
 from src.long_short_term_memory.helpers_lstm import *
 from src.common.helpers_common import *

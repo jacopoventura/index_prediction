@@ -1,8 +1,6 @@
-from torch import nn
+# Copyright (c) 2024 Jacopo Ventura
 
-# Sources:
-# https://www.enthought.com/blog/neural-network-output-layer/
-# https://www.youtube.com/watch?v=KvshNSVBuaI&list=PLCC34OHNcOtpcgR9LEYSdi9r7XIbpkpK1&index=9 
+from torch import nn
 
 
 class NeuralNetworkPricePositiveNegative(nn.Module):
