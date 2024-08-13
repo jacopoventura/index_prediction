@@ -8,6 +8,7 @@ scipy
 plotly
 appdirs
 scikit-learn
+keras
 tensorflow==2.15.0
 yfinance>=0.2.31b2
 matplotlib
