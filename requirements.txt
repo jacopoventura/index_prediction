@@ -8,5 +8,5 @@ scipy
 plotly
 appdirs
 scikit-learn
-tensorflow==2.15.0
+tensorflow
 yfinance>=0.2.31b2
