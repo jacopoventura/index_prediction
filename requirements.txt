@@ -10,3 +10,4 @@ appdirs
 scikit-learn
 tensorflow
 yfinance>=0.2.31b2
+matplotlib
