@@ -125,6 +125,11 @@ parameters_dict = {
 with open(MODEL_PATH + "/parameters_dict.pkl", 'wb') as f:
     pickle.dump(parameters_dict, f)
 
+# save scaler
+with open(MODEL_PATH + "/scaler.pkl", 'wb') as f:
+    pickle.dump(column_scaler, f)
+
+
 # STEP 7: test the trained model
 # get the final dataframe for the testing set
 y_predicted = model.predict(X_test)
