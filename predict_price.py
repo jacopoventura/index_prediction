@@ -3,7 +3,8 @@
 import math
 import pickle
 import os
-from src.long_short_term_memory.helpers_lstm import *
+import tensorflow as tf
+# from src.long_short_term_memory.helpers_lstm import *
 from src.common.helpers_common import *
 import streamlit as st
 import sys
@@ -15,6 +16,11 @@ pd.set_option('display.max_rows', 500)
 pd.set_option('display.width', 1000)
 warnings.filterwarnings("ignore")
 
+# TODO:
+# 1. write readme
+# 2. write contact
+# 3. deploy
+# 4. update portfolio
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
@@ -143,13 +149,16 @@ if __name__ == '__main__':
         close_price = last_sequence_dict["close"][idx]
         change_pct = 100. * (predicted_price - close_price) / close_price
         direction = "POSITIVE" if change_pct > 0 else "NEGATIVE"
-        st.write(f"On the {close_day}, {TICKER} closed at {close_price:.1f}.")
+        st.markdown("<h4 style='text-align: center;'>" + f"On the {close_day}, {TICKER} closed at {close_price:.1f}."  + " </h4>",
+                    unsafe_allow_html=True)
         if TYPE_OF_PREDICTION == "price":
             if LOOKUP_STEP == 1:
-                st.write(f"The closing price at the next trading day will be: {predicted_price:.1f} ({change_pct:+.1f}%)")
+                st.markdown("<h4 style='text-align: center;'>" +
+                            f"The closing price at the next trading day will be: {predicted_price:.1f} ({change_pct:+.1f}%)"
+                            + " </h4>", unsafe_allow_html=True)
         elif TYPE_OF_PREDICTION == "change":
             if LOOKUP_STEP == 1:
-                st.write(f"The next trading day will be: {direction}")
+                st.markdown("<h4 style='text-align: center;'>" + f"The next trading day will be: {direction}" + " </h4>", unsafe_allow_html=True)
 
     # PLOT
     # requires train_test_dict = split_train_test_lstm(...)
