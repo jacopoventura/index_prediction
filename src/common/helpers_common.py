@@ -9,6 +9,18 @@ from stockstats import StockDataFrame
 from sklearn import preprocessing
 import matplotlib.pyplot as plt
 
+
+from pathlib import Path
+import appdirs as ad
+
+CACHE_DIR = ".cache"
+
+# Force appdirs to say that the cache dir is .cache
+ad.user_cache_dir = lambda *args: CACHE_DIR
+
+# Create the cache dir if it doesn't exist
+Path(CACHE_DIR).mkdir(exist_ok=True)
+
 pd.set_option('display.max_columns', None)
 pd.set_option('display.max_rows', 500)
 pd.set_option('display.width', 1000)
