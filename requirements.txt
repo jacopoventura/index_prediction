@@ -1,5 +1,6 @@
 DateTime
 numpy
+stockstats
 streamlit
 streamlit-analytics
 pandas

@@ -6,17 +6,9 @@ import os
 from src.long_short_term_memory.helpers_lstm import *
 from src.common.helpers_common import *
 import streamlit as st
+import sys
 # import streamlit_analytics
 import warnings
-
-
-# TODO:
-
-# 3. current spy statistics
-
-# 4. move to streamlit + option positive or negative change
-
-# 5. new training
 
 pd.set_option('display.max_columns', None)
 pd.set_option('display.max_rows', 500)
@@ -36,15 +28,14 @@ if __name__ == '__main__':
     # inputs
     TICKER = st.selectbox(
         "ticker",
-        ("SPY"),
+        ("SPY", ),
     )
     prediction_horizon = st.selectbox(
         "predict",
-        ("next day close"),
+        ("next day close", ),
     )
 
-
-    LOOKUP_STEP = 0
+    LOOKUP_STEP = 1
     if prediction_horizon == "next day close":
         LOOKUP_STEP = 1
 
@@ -80,7 +71,6 @@ if __name__ == '__main__':
     with open(MODEL_PATH + "/scaler.pkl", 'rb') as f:
         column_scaler_loaded = pickle.load(f)
 
-
     # ======================================================================================
     #                                    QUERY AND PREPARE DATA
     # ======================================================================================
@@ -101,6 +91,11 @@ if __name__ == '__main__':
                                                                         add_vix=ADD_VIX,
                                                                         calculate_ratio_close_with_indicators=CALCULATE_RATIOS)
 
+    if price_history_df.empty:
+        st.error('Could not query price history.', icon="🚨")
+        sys.exit(1)
+        st.stop()
+
     # prepare data from the model
     feature_list_nested = [predictors_dict[feature] for feature in SELECTED_FEATURES]
     FEATURE_LIST = [element for sublist in feature_list_nested for element in sublist]
@@ -118,7 +113,6 @@ if __name__ == '__main__':
         number_positive_days = 625 + num_positive_days_in_df
         number_negative_days = 532 + (num_days_in_df - num_positive_days_in_df)
 
-
     # ======================================================================================
     #                           PREDICT PRICE (PRODUCT BUSINESS LOGIC)
     # ======================================================================================
@@ -133,15 +127,29 @@ if __name__ == '__main__':
     # apply bias
     price_future = price_future + final_bias
 
+    if len(price_future) == 0:
+        st.error('Internal error: could not predict price.', icon="🚨")
+        sys.exit(1)
+        st.stop()
+    else:
+        st.success('Prediction successful! ', icon="✅")
+
+    # Show results in the app
+    st.markdown("<h2 style='text-align: center; '>Prediction</h2>", unsafe_allow_html=True)
+
     is_positive_change, pct_change, category_pct_change = calc_relative_change_with_levels(last_sequence_dict["close"], price_future)
     for idx, predicted_price in enumerate(price_future):
         close_day = last_sequence_dict["date close"][idx]
         close_price = last_sequence_dict["close"][idx]
         change_pct = 100. * (predicted_price - close_price) / close_price
-        print(f"Price {LOOKUP_STEP} days after the close {close_price:.1f} on the " + str(close_day) + f": {predicted_price:.1f} , "
-                                                                                                       f"thus {change_pct:+.1f}%")
-
-
+        direction = "POSITIVE" if change_pct > 0 else "NEGATIVE"
+        st.write(f"On the {close_day}, {TICKER} closed at {close_price:.1f}.")
+        if TYPE_OF_PREDICTION == "price":
+            if LOOKUP_STEP == 1:
+                st.write(f"The closing price at the next trading day will be: {predicted_price:.1f} ({change_pct:+.1f}%)")
+        elif TYPE_OF_PREDICTION == "change":
+            if LOOKUP_STEP == 1:
+                st.write(f"The next trading day will be: {direction}")
 
     # PLOT
     # requires train_test_dict = split_train_test_lstm(...)
