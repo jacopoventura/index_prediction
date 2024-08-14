@@ -4,12 +4,11 @@ import math
 import pickle
 import os
 import tensorflow as tf
-# from src.long_short_term_memory.helpers_lstm import *
 from src.common.helpers_common import *
 import streamlit as st
 import sys
-# import streamlit_analytics
 import warnings
+
 
 pd.set_option('display.max_columns', None)
 pd.set_option('display.max_rows', 500)
@@ -18,8 +17,7 @@ warnings.filterwarnings("ignore")
 
 # TODO:
 # 1. write readme
-# 2. write contact
-# 3. deploy
+# 3. remove icons
 # 4. update portfolio
 
 # Press the green button in the gutter to run the script.
@@ -149,7 +147,7 @@ if __name__ == '__main__':
         close_price = last_sequence_dict["close"][idx]
         change_pct = 100. * (predicted_price - close_price) / close_price
         direction = "POSITIVE" if change_pct > 0 else "NEGATIVE"
-        st.markdown("<h4 style='text-align: center;'>" + f"On the {close_day}, {TICKER} closed at {close_price:.1f}."  + " </h4>",
+        st.markdown("<h4 style='text-align: center;'>" + f"On the {close_day.strftime('%d-%b-%Y')}, {TICKER} closed at {close_price:.1f}."  + " </h4>",
                     unsafe_allow_html=True)
         if TYPE_OF_PREDICTION == "price":
             if LOOKUP_STEP == 1:
