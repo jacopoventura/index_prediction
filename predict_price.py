@@ -6,6 +6,7 @@ import os
 import tensorflow as tf
 from src.common.helpers_common import *
 import streamlit as st
+import streamlit_analytics
 import sys
 import warnings
 
@@ -163,3 +164,29 @@ if __name__ == '__main__':
     # if SCALE:
     #     y_close_test = np.squeeze(column_scaler_loaded["close"].inverse_transform(np.expand_dims(y_close_test, axis=0)))
     # plot_price_prediction(price_future, y_close_test, last_sequence_dict["close"])
+
+
+hide_streamlit_style = """
+            <style>
+            [data-testid="stToolbar"] {visibility: hidden !important;}
+            footer {visibility: hidden !important;}
+            </style>
+            """
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+
+st.markdown(
+    """
+    <style>
+    .css-1jc7ptx, .e1ewe7hr3, .viewerBadge_container__1QSob,
+    .styles_viewerBadge__1yB5_, .viewerBadge_link__1S137,
+    .viewerBadge_text__1JaDK {
+        display: none;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+with streamlit_analytics.track():
+    st.text_input("Write something")
+    st.button("Click me")
