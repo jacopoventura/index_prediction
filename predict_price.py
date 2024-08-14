@@ -181,7 +181,3 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
-
-with streamlit_analytics.track():
-    st.text_input("Write something")
-    st.button("Click me")
