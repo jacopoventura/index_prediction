@@ -16,7 +16,6 @@ pd.set_option('display.width', 1000)
 warnings.filterwarnings("ignore")
 
 # TODO:
-# 1. write readme
 # 3. remove icons
 # 4. update portfolio
 
@@ -27,7 +26,6 @@ if __name__ == '__main__':
 
     # App title
     st.markdown("<h1 style='text-align: center; '>Stock price prediction</h1>", unsafe_allow_html=True)
-    st.markdown("<h4 style='text-align: center; '>with Machine Learning</h4>", unsafe_allow_html=True)
 
     # inputs
     TICKER = st.selectbox(
