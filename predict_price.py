@@ -16,9 +16,6 @@ pd.set_option('display.max_rows', 500)
 pd.set_option('display.width', 1000)
 warnings.filterwarnings("ignore")
 
-# TODO:
-# 3. remove icons
-# 4. update portfolio
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
@@ -97,7 +94,6 @@ if __name__ == '__main__':
     if price_history_df.empty:
         st.error('Could not query price history.', icon="🚨")
         sys.exit(1)
-        st.stop()
 
     # prepare data from the model
     feature_list_nested = [predictors_dict[feature] for feature in SELECTED_FEATURES]
@@ -133,7 +129,6 @@ if __name__ == '__main__':
     if len(price_future) == 0:
         st.error('Internal error: could not predict price.', icon="🚨")
         sys.exit(1)
-        st.stop()
     else:
         st.success('Prediction successful! ', icon="✅")
 
@@ -146,7 +141,7 @@ if __name__ == '__main__':
         close_price = last_sequence_dict["close"][idx]
         change_pct = 100. * (predicted_price - close_price) / close_price
         direction = "POSITIVE" if change_pct > 0 else "NEGATIVE"
-        st.markdown("<h4 style='text-align: center;'>" + f"On the {close_day.strftime('%d-%b-%Y')}, {TICKER} closed at {close_price:.1f}."  + " </h4>",
+        st.markdown("<h4 style='text-align: center;'>" + f"On the {close_day.strftime('%d-%b-%Y')}, {TICKER} closed at {close_price:.1f}." + " </h4>",
                     unsafe_allow_html=True)
         if TYPE_OF_PREDICTION == "price":
             if LOOKUP_STEP == 1:
