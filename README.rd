@@ -9,11 +9,6 @@ The ML model shall:
 1. predict the price the next N days (number of days of the future horizon)
 2. N is a configurable parameter
 
-We are option traders, thus we are particularly interested in predicting negative days for two reasons:
-1. sell put to be open in negative days
-2. 0DTE strategies
-3. avoid rolling of naked puts
-
 Scripts:
 1. price_change_prediction_NN_and_PATTERNS.py: first ML test with simple RF, NN and learned patterns
 2. price_prediction_LSTM.py: training of final LSTM model and product business logic
